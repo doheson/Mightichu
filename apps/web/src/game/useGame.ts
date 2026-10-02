@@ -11,12 +11,18 @@ export interface GameState {
   readonly log: readonly string[];
   readonly score: unknown;
   readonly error: string | null;
+  /** 매치 누적 점수. 라운드가 아니라 매치가 게임의 단위다. */
+  readonly totals: Readonly<Record<string, number>>;
+  readonly history: readonly Readonly<Record<string, number>>[];
 }
 
 export function useGame(game: GameId): {
   state: GameState;
   send: (action: unknown) => void;
-  newGame: (seed?: number) => void;
+  /** 같은 매치의 다음 라운드. 누적 점수가 이어진다. */
+  nextRound: () => void;
+  /** 새 매치 — 누적 점수를 초기화한다. */
+  newMatch: () => void;
 } {
   const workerRef = useRef<Worker | null>(null);
   const [state, setState] = useState<GameState>({
@@ -26,6 +32,8 @@ export function useGame(game: GameId): {
     log: [],
     score: null,
     error: null,
+    totals: {},
+    history: [],
   });
 
   useEffect(() => {
@@ -42,6 +50,8 @@ export function useGame(game: GameId): {
           legal: data.legal,
           log: data.log,
           error: null,
+          totals: data.totals,
+          history: data.history,
           score:
             (data.view as { outcome?: unknown } | null)?.outcome == null ? null : prev.score,
         }));
@@ -53,7 +63,7 @@ export function useGame(game: GameId): {
     };
 
     worker.postMessage({
-      type: 'NEW_GAME',
+      type: 'NEW_MATCH',
       game,
       seed: Math.floor(Math.random() * 2 ** 31),
     } satisfies ToWorker);
@@ -68,17 +78,30 @@ export function useGame(game: GameId): {
     workerRef.current?.postMessage({ type: 'ACTION', action } satisfies ToWorker);
   }, []);
 
-  const newGame = useCallback(
-    (seed?: number) => {
-      setState((prev) => ({ ...prev, view: null, score: null, log: [], error: null }));
-      workerRef.current?.postMessage({
-        type: 'NEW_GAME',
-        game,
-        seed: seed ?? Math.floor(Math.random() * 2 ** 31),
-      } satisfies ToWorker);
-    },
-    [game],
-  );
+  const nextRound = useCallback(() => {
+    setState((prev) => ({ ...prev, view: null, score: null, log: [], error: null }));
+    workerRef.current?.postMessage({
+      type: 'NEXT_ROUND',
+      seed: Math.floor(Math.random() * 2 ** 31),
+    } satisfies ToWorker);
+  }, []);
 
-  return { state, send, newGame };
+  const newMatch = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      view: null,
+      score: null,
+      log: [],
+      error: null,
+      totals: {},
+      history: [],
+    }));
+    workerRef.current?.postMessage({
+      type: 'NEW_MATCH',
+      game,
+      seed: Math.floor(Math.random() * 2 ** 31),
+    } satisfies ToWorker);
+  }, [game]);
+
+  return { state, send, nextRound, newMatch };
 }

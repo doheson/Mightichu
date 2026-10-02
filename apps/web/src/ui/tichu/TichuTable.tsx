@@ -3,6 +3,7 @@
 import type { PlayerId, TichuView } from '../../game/tichuTypes.js';
 import { useSeatName } from '../names.js';
 import { TichuCard } from './TichuCard.js';
+import { CardStack } from '../CardStack.js';
 
 /**
  * 티츄는 **반시계(ccw)** 로 진행한다. 화면에서는 각도를 줄여가면 반시계가 된다.
@@ -116,7 +117,7 @@ export function TichuTable({ view }: { readonly view: TichuView }): React.JSX.El
               </div>
               {/* 라운드 중에는 획득 점수를 보여주지 않는다 — 끝날 때 팀 점수로 한 번에 공개한다 */}
               <div className="seat__meta">
-                <span className="pill">{view.handCounts[seat] ?? 0}장</span>
+                <CardStack count={view.handCounts[seat] ?? 0} />
                 {(view.takenCounts[seat] ?? 0) > 0 ? (
                   <span className="seat__points">먹은 {view.takenCounts[seat]}장</span>
                 ) : null}

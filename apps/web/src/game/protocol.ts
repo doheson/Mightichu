@@ -9,8 +9,14 @@
 import type { GameId } from './registry.js';
 
 export type ToWorker =
-  | { readonly type: 'NEW_GAME'; readonly game: GameId; readonly seed: number }
+  /** 새 **매치**를 시작한다 — 누적 점수를 초기화한다. */
+  | { readonly type: 'NEW_MATCH'; readonly game: GameId; readonly seed: number }
+  /** 같은 매치 안에서 다음 라운드. 누적 점수는 이어진다. */
+  | { readonly type: 'NEXT_ROUND'; readonly seed: number }
   | { readonly type: 'ACTION'; readonly action: unknown };
+
+/** 한 라운드의 플레이어별 증감. 팀 합산은 UI 가 한다. */
+export type RoundResult = Readonly<Record<string, number>>;
 
 export type FromWorker =
   | {
@@ -19,6 +25,10 @@ export type FromWorker =
       readonly view: unknown;
       readonly legal: readonly unknown[];
       readonly log: readonly string[];
+      /** 매치 누적 점수. */
+      readonly totals: Readonly<Record<string, number>>;
+      /** 라운드별 결과 — 점수표에 쓴다. */
+      readonly history: readonly RoundResult[];
     }
   | { readonly type: 'SCORE'; readonly score: unknown }
   | { readonly type: 'ERROR'; readonly message: string };

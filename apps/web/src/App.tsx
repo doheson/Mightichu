@@ -93,10 +93,15 @@ const AI_NAMES: Record<string, string> = {
 };
 
 function AiMode({ game }: { readonly game: GameId }): React.JSX.Element {
-  const { state, send, newGame } = useGame(game);
-  const { view, legal, log, score, error } = state;
+  const { state, send, nextRound, newMatch } = useGame(game);
+  const { view, legal, log, score, error, totals, history } = state;
+  const target = GAMES[game].target;
 
   if (view === null) return <p className="loading">딜 중…</p>;
+
+  // 1000점을 넘겼으면 다음 라운드가 아니라 새 매치를 시작한다
+  const reached =
+    target !== null && Object.values(totals).some((v) => v >= target);
 
   return (
     <SeatNames nameOf={(seat) => AI_NAMES[seat] ?? seat}>
@@ -108,8 +113,11 @@ function AiMode({ game }: { readonly game: GameId }): React.JSX.Element {
         score={score}
         error={error}
         send={send}
-        onNext={() => newGame()}
-        nextLabel="새 게임"
+        totals={totals}
+        history={history}
+        target={target}
+        onNext={reached ? () => newMatch() : () => nextRound()}
+        nextLabel={reached ? '새 매치' : '다음 판'}
       />
     </SeatNames>
   );
@@ -167,6 +175,9 @@ function OnlineMode({ game }: { readonly game: GameId }): React.JSX.Element {
           score={state.score}
           error={error}
           send={online.send}
+          totals={state.totals}
+          history={state.history}
+          target={GAMES[state.game].target}
           onNext={isHost ? online.nextRound : null}
           nextLabel="다음 판"
         />
@@ -186,6 +197,9 @@ function GameBoard(props: {
   readonly send: (action: unknown) => void;
   readonly onNext: (() => void) | null;
   readonly nextLabel: string;
+  readonly totals: Readonly<Record<string, number>>;
+  readonly history: readonly Readonly<Record<string, number>>[];
+  readonly target: number | null;
 }): React.JSX.Element {
   const common = {
     log: props.log,
@@ -201,6 +215,9 @@ function GameBoard(props: {
         view={props.view as TichuView}
         legal={props.legal as readonly TichuAction[]}
         send={props.send as (a: TichuAction) => void}
+        totals={props.totals}
+        history={props.history}
+        target={props.target}
       />
     );
   }

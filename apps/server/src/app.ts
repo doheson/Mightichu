@@ -97,6 +97,7 @@ function sendViews(room: Room): void {
       type: 'SCORE',
       score: room.scoreOf(),
       totals: room.totals,
+      history: room.history,
     };
     for (const member of room.members) {
       if (member.socketId === null) continue;

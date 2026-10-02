@@ -3,6 +3,7 @@
 import type { RoundScore } from '@mightichu/core';
 import type { TichuAction, TichuView } from '../../game/tichuTypes.js';
 import { Log } from '../Table.js';
+import { MatchScore, type TeamSpec } from '../Scoreboard.js';
 import { useSeatName } from '../names.js';
 import { TichuTable, teamOf } from './TichuTable.js';
 import { DragonPanel, ExchangePanel, GrandPanel, PlayPanel } from './panels.js';
@@ -16,6 +17,9 @@ export interface TichuBoardProps {
   readonly send: (action: TichuAction) => void;
   readonly onNext: (() => void) | null;
   readonly nextLabel: string;
+  readonly totals: Readonly<Record<string, number>>;
+  readonly history: readonly Readonly<Record<string, number>>[];
+  readonly target: number | null;
 }
 
 const PHASE_LABEL: Record<string, string> = {
@@ -35,9 +39,16 @@ export function TichuBoard({
   send,
   onNext,
   nextLabel,
+  totals,
+  history,
+  target,
 }: TichuBoardProps): React.JSX.Element {
   const seatName = useSeatName();
   const teamMine = [view.me, view.partner].filter((p): p is string => p !== null);
+  const teams: TeamSpec[] = [
+    { key: 'blue', name: '파랑', color: 'blue', seats: [view.seats[0] as string, view.seats[2] as string] },
+    { key: 'red', name: '빨강', color: 'red', seats: [view.seats[1] as string, view.seats[3] as string] },
+  ];
 
   return (
     <>
@@ -59,6 +70,16 @@ export function TichuBoard({
         <div className="header__item">
           <span className="label">남은 인원</span>
           <strong>{view.seats.length - view.finished.length}명</strong>
+        </div>
+        <div className="header__item header__item--wide">
+          <span className="label">매치 (1000점 선취)</span>
+          <MatchScore
+            teams={teams}
+            totals={totals}
+            history={history}
+            target={target}
+            teamed
+          />
         </div>
       </header>
 

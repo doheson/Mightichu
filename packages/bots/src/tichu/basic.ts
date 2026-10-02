@@ -160,6 +160,24 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
         });
         const usable = trickPoints >= 10 ? pool : nonBomb.length > 0 ? nonBomb : pool;
 
+        /**
+         * **파트너가 티츄를 불렀고 내가 선을 잡았으면 싱글로 돌려준다.**
+         *
+         * 티츄는 선언자가 **먼저** 손을 털어야 성공이다. 내가 긴 조합으로 리드하면
+         * 파트너가 그 형태·장수를 맞춰야만 받을 수 있어 길이 막힌다.
+         * 싱글이 파트너가 가장 받기 쉬운 형태라 선을 넘겨주기 좋다.
+         */
+        const partnerCalledTichu =
+          view.partner !== null && (view.calls[view.partner] ?? 'NONE') !== 'NONE';
+        if (leading && partnerCalledTichu) {
+          const singles = usable.filter((a) => a.cards.length === 1);
+          if (singles.length > 0) {
+            return [...singles].sort(
+              (a, b) => comboCost(a.cards) - comboCost(b.cards),
+            )[0] as TichuAction;
+          }
+        }
+
         if (leading) {
           /**
            * 리드는 **계획에 있는 단위**부터 낸다. 계획을 깨면 남은 카드가 애매해진다.

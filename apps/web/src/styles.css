@@ -533,3 +533,51 @@ body {
 /* 좌석과 낸 카드는 로그 위로 */
 .seat, .trickslot { z-index: 2; }
 .table__center { z-index: 1; }
+
+/* ── 매치 점수표 */
+.matchscore {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 17px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.matchscore:hover { border-color: var(--accent); }
+.matchscore--won { border-color: #ffd964; box-shadow: 0 0 0 1px #ffd964 inset; }
+.matchscore__vs { color: var(--text-dim); margin: 0 3px; font-weight: 400; }
+.matchscore__target { font-size: 11px; font-weight: 400; color: var(--text-dim); }
+.matchscore__caret { font-size: 10px; color: var(--text-dim); }
+
+.scoretable__won { margin: 0; font-size: 14px; }
+.scoretable__empty { color: var(--text-dim); text-align: center; padding: 10px 0; }
+.scores--match { font-variant-numeric: tabular-nums; }
+.scores--match th {
+  text-align: right; font-size: 12px; padding: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.scores--match th:first-child, .scores--match td:first-child {
+  text-align: left; color: var(--text-dim);
+}
+.scores--match td { text-align: right; }
+.scores--match tfoot td {
+  font-weight: 800; border-top: 2px solid var(--border); border-bottom: none;
+}
+.scoretable__members { display: block; font-size: 10px; font-weight: 400; color: var(--text-dim); }
+.scoretable { max-height: 320px; overflow-y: auto; }
+
+/* ── 남은 카드 스택 */
+.stack { display: inline-flex; align-items: center; gap: 5px; }
+.stack__cards { position: relative; display: inline-block; height: 16px; }
+.stack__card {
+  position: absolute; top: 0;
+  width: 10px; height: 16px;
+  border-radius: 2px;
+  background: linear-gradient(135deg, #4a6ae0, #2a47a8);
+  border: 1px solid color-mix(in srgb, #000 35%, transparent);
+}
+.stack__count { font-size: 11px; opacity: 0.85; }
+.header__item--wide { grid-column: span 2; }

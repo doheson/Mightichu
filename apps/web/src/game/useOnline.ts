@@ -42,6 +42,7 @@ export interface OnlineState {
   readonly log: readonly string[];
   readonly score: RoundScore | null;
   readonly totals: Readonly<Record<string, number>>;
+  readonly history: readonly Readonly<Record<string, number>>[];
   readonly error: string | null;
 }
 
@@ -56,6 +57,7 @@ const EMPTY: OnlineState = {
   log: [],
   score: null,
   totals: {},
+  history: [],
   error: null,
 };
 
@@ -117,6 +119,7 @@ export function useOnline(): OnlineApi {
             ...s,
             score: message.score as RoundScore,
             totals: message.totals,
+            history: message.history,
           }));
           break;
         case 'ERROR':

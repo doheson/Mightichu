@@ -83,7 +83,14 @@ export type ServerMessage =
       readonly legal: readonly unknown[];
       readonly log: readonly string[];
     }
-  | { readonly type: 'SCORE'; readonly score: unknown; readonly totals: Readonly<Record<string, number>> }
+  | {
+      readonly type: 'SCORE';
+      readonly score: unknown;
+      /** 매치 누적 점수. */
+      readonly totals: Readonly<Record<string, number>>;
+      /** 라운드별 결과 — 점수표에 쓴다. */
+      readonly history: readonly Readonly<Record<string, number>>[];
+    }
   | { readonly type: 'ERROR'; readonly code: string; readonly message: string };
 
 /** 소켓 이벤트 이름 — 양쪽이 같은 상수를 쓴다. */

@@ -47,6 +47,8 @@ export class Room {
   log: string[] = [];
   roundLog: RoundLog<unknown, unknown> | null = null;
   totals: Record<PlayerId, number> = {};
+  /** 라운드별 결과 — 점수표에 쓴다. 매치가 게임의 단위다(티츄는 1000점). */
+  history: Record<PlayerId, number>[] = [];
   lastActivity = Date.now();
   /** 라운드 점수를 totals 에 한 번만 더하기 위한 가드. */
   private settled = false;
@@ -271,6 +273,7 @@ export class Room {
     for (const [seat, delta] of Object.entries(score.perPlayer)) {
       this.totals[seat] = (this.totals[seat] ?? 0) + delta;
     }
+    this.history.push({ ...score.perPlayer });
     this.settled = true;
   }
 

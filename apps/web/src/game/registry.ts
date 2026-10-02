@@ -16,6 +16,14 @@ export interface GameEntry {
   readonly seats: readonly PlayerId[];
   readonly label: string;
   readonly subtitle: string;
+  /**
+   * 매치 목표 점수. 먼저 도달하는 쪽이 이긴다.
+   * 티츄는 **1000점** — 한 라운드로 끝나지 않는다.
+   * 마이티는 정해진 목표가 없어 라운드마다 정산만 한다.
+   */
+  readonly target: number | null;
+  /** 팀전인가 — 점수표를 팀 단위로 보여줄지 정한다. */
+  readonly teamed: boolean;
 }
 
 const MIGHTY_SEATS: readonly PlayerId[] = ['p1', 'p2', 'p3', 'p4', 'p5'];
@@ -28,13 +36,17 @@ export const GAMES: Record<GameId, GameEntry> = {
     seats: MIGHTY_SEATS,
     label: '마이티',
     subtitle: '5인 · 숨은 프렌드',
+    target: null,
+    teamed: false,
   },
   tichu: {
     engine: tichuEngine as unknown as GameEntry['engine'],
     bot: createTichuBasicBot() as unknown as GameEntry['bot'],
     seats: TICHU_SEATS,
     label: '티츄',
-    subtitle: '4인 · 2:2 팀',
+    subtitle: '4인 · 2:2 팀 · 1000점',
+    target: 1000,
+    teamed: true,
   },
 };
 

@@ -27,6 +27,11 @@ let state: unknown = null;
 let rng: Rng = createRng(1);
 let log: string[] = [];
 let driving = false;
+/** 매치 누적 점수와 라운드 기록. 라운드가 아니라 **매치**가 게임의 단위다. */
+let totals: Record<string, number> = {};
+let history: Record<string, number>[] = [];
+/** 이번 라운드 점수를 두 번 더하지 않기 위한 가드. */
+let settled = false;
 
 const SEAT_LABEL: Record<string, string> = {
   p1: '나',
@@ -46,16 +51,42 @@ function post(message: FromWorker): void {
 
 function publish(): void {
   if (state === null) return;
+  settle();
   post({
     type: 'STATE',
     game,
     view: entry.engine.view(state as never, HUMAN),
     legal: entry.engine.legalActions(state as never, HUMAN),
     log: [...log],
+    totals: { ...totals },
+    history: history.map((h) => ({ ...h })),
   });
   if (entry.engine.isOver(state as never)) {
     post({ type: 'SCORE', score: entry.engine.score(state as never) });
   }
+}
+
+/** 라운드가 끝났으면 매치 누적에 더한다. 한 번만. */
+function settle(): void {
+  if (settled || state === null || !entry.engine.isOver(state as never)) return;
+  const score = entry.engine.score(state as never);
+  for (const [seat, delta] of Object.entries(score.perPlayer)) {
+    totals[seat] = (totals[seat] ?? 0) + delta;
+  }
+  history.push({ ...score.perPlayer });
+  settled = true;
+}
+
+function beginRound(seed: number): void {
+  log = [];
+  settled = false;
+  state = entry.engine.init({
+    config: {} as never,
+    players: entry.seats,
+    seed,
+  });
+  publish();
+  void advance();
 }
 
 function record(events: readonly GameEvent[]): void {
@@ -133,18 +164,19 @@ async function advance(): Promise<void> {
 self.onmessage = (message: MessageEvent<ToWorker>): void => {
   const data = message.data;
 
-  if (data.type === 'NEW_GAME') {
+  if (data.type === 'NEW_MATCH') {
     game = data.game;
     entry = GAMES[data.game];
     rng = createRng(data.seed ^ 0x5bf03635);
-    log = [];
-    state = entry.engine.init({
-      config: {} as never,
-      players: entry.seats,
-      seed: data.seed,
-    });
-    publish();
-    void advance();
+    totals = {};
+    history = [];
+    for (const seat of entry.seats) totals[seat] = 0;
+    beginRound(data.seed);
+    return;
+  }
+
+  if (data.type === 'NEXT_ROUND') {
+    beginRound(data.seed);
     return;
   }
 

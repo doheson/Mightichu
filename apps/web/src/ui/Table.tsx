@@ -1,6 +1,7 @@
 import { bidLabel } from '@mightichu/mighty';
 import type { MightyView, PlayerId } from '../game/types.js';
-import { CardBack, CardView } from './Card.js';
+import { CardView } from './Card.js';
+import { CardStack } from './CardStack.js';
 
 import { useSeatName } from './names.js';
 
@@ -151,7 +152,7 @@ export function Seats({ view }: { readonly view: MightyView }): React.JSX.Elemen
                 {view.friend === seat ? ' 🤝' : ''}
               </div>
               <div className="seat__meta">
-                <CardBack count={view.handCounts[seat] ?? 0} />
+                <CardStack count={view.handCounts[seat] ?? 0} />
                 <span className="seat__points">{view.points[seat] ?? 0}점</span>
               </div>
               {view.passed.includes(seat) && view.phase === 'BIDDING' ? (
