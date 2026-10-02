@@ -1,0 +1,14 @@
+{
+  "name": "@mightichu/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "게임 계약, 결정론적 RNG, 좌석/진행방향, 리플레이 — 런타임 의존성 0",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {}
+}
