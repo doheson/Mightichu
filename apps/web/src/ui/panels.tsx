@@ -4,7 +4,7 @@ import { bidLabel, cardLabel, sortHand } from '@mightichu/mighty';
 import { useMemo, useState } from 'react';
 import type { Bid, Card, MightyAction, MightyView, Suit } from '../game/types.js';
 import { CardView } from './Card.js';
-import { seatName } from './Table.js';
+import { useSeatName } from './names.js';
 
 interface PanelProps {
   readonly view: MightyView;
@@ -45,6 +45,7 @@ const TRUMPS: readonly { value: Bid['trump']; label: string }[] = [
 ];
 
 export function BiddingPanel({ view, legal, send }: PanelProps): React.JSX.Element {
+  const seatName = useSeatName();
   const bids = useMemo(
     () => legal.flatMap((a) => (a.type === 'BID' ? [a.bid] : [])),
     [legal],

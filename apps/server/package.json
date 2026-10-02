@@ -1,0 +1,21 @@
+{
+  "name": "@mightichu/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@mightichu/bots": "workspace:*",
+    "@mightichu/core": "workspace:*",
+    "@mightichu/mighty": "workspace:*",
+    "@mightichu/protocol": "workspace:*",
+    "socket.io": "^4.8.0"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.4",
+    "tsx": "^4.20.0"
+  }
+}

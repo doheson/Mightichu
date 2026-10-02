@@ -1,204 +1,137 @@
-import { sortHand } from '@mightichu/mighty';
+import { useMemo, useState } from 'react';
 import { useGame } from './game/useGame.js';
-import type { MightyView, RoundScore } from './game/types.js';
-import { CardView } from './ui/Card.js';
-import { Header, Log, Seats, seatName } from './ui/Table.js';
-import {
-  BiddingPanel,
-  FriendPanel,
-  KittyPanel,
-  MisdealPanel,
-  PlayPanel,
-} from './ui/panels.js';
+import { useOnline } from './game/useOnline.js';
+import type { PlayerId } from './game/types.js';
+import { Board } from './ui/Board.js';
+import { JoinForm, RoomPanel } from './ui/Lobby.js';
+import { SeatNames } from './ui/names.js';
+
+type Mode = 'menu' | 'ai' | 'online';
 
 export default function App(): React.JSX.Element {
-  const { state, send, newGame } = useGame();
-  const { view, legal, log, score, error } = state;
-
-  if (view === null) {
-    return (
-      <main className="app">
-        <p className="loading">딜 중…</p>
-      </main>
-    );
-  }
+  const [mode, setMode] = useState<Mode>('menu');
 
   return (
     <main className="app">
       <div className="topbar">
         <h1 className="title">Mightichu</h1>
-        <span className="subtitle">마이티 · AI 대전</span>
-        <button type="button" className="btn btn--ghost" onClick={() => newGame()}>
-          새 게임
-        </button>
+        <span className="subtitle">
+          마이티 {mode === 'ai' ? '· AI 대전' : mode === 'online' ? '· 온라인' : ''}
+        </span>
+        {mode !== 'menu' ? (
+          <button type="button" className="btn btn--ghost" onClick={() => setMode('menu')}>
+            메뉴
+          </button>
+        ) : null}
       </div>
 
-      <Header view={view} />
-      {error !== null ? <div className="error">{error}</div> : null}
-
-      <Seats view={view} />
-
-      <section className="main">
-        <div className="main__left">
-          {view.phase === 'DONE' ? (
-            <Result view={view} score={score} onNewGame={() => newGame()} />
-          ) : (
-            <Panel view={view} legal={legal} send={send} />
-          )}
-        </div>
-        <Log lines={log} />
-      </section>
-
-      {view.phase !== 'KITTY' && view.phase !== 'PLAY' && view.phase !== 'DONE' ? (
-        <section className="myhand">
-          <div className="myhand__title">내 손패 ({view.myHand.length}장)</div>
-          <div className="hand">
-            {sortHand(view.myHand).map((card) => (
-              <CardView key={card} card={card} disabled />
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {mode === 'menu' ? <Menu onPick={setMode} /> : null}
+      {mode === 'ai' ? <AiMode /> : null}
+      {mode === 'online' ? <OnlineMode /> : null}
     </main>
   );
 }
 
-function Panel(props: {
-  readonly view: MightyView;
-  readonly legal: readonly import('./game/types.js').MightyAction[];
-  readonly send: (action: import('./game/types.js').MightyAction) => void;
-}): React.JSX.Element {
-  const { view } = props;
-  if (view.phase === 'MISDEAL') {
-    return view.iCanDemandMisdeal ? (
-      <MisdealPanel {...props} />
-    ) : (
-      <Waiting text="다른 플레이어의 재딜 확인을 기다립니다…" />
-    );
-  }
-  if (view.phase === 'BIDDING') {
-    return view.currentBidder === view.me ? (
-      <BiddingPanel {...props} />
-    ) : (
-      <Waiting text={`${view.currentBidder === null ? '' : seatName(view.currentBidder)} 의 공약을 기다립니다…`} />
-    );
-  }
-  if (view.phase === 'KITTY') {
-    return view.declarer === view.me ? (
-      <KittyPanel {...props} />
-    ) : (
-      <Waiting text="주공이 바닥을 처리하는 중…" />
-    );
-  }
-  if (view.phase === 'FRIEND') {
-    return view.declarer === view.me ? (
-      <FriendPanel {...props} />
-    ) : (
-      <Waiting text="주공이 프렌드를 지정하는 중…" />
-    );
-  }
-  return <PlayPanel {...props} />;
-}
-
-function Waiting({ text }: { readonly text: string }): React.JSX.Element {
+function Menu({ onPick }: { readonly onPick: (mode: Mode) => void }): React.JSX.Element {
   return (
     <div className="panel">
-      <p className="panel__hint">{text}</p>
+      <p className="panel__hint">어떻게 플레이할까요?</p>
+      <div className="panel__row">
+        <button type="button" className="btn btn--primary" onClick={() => onPick('ai')}>
+          AI 대전 (혼자)
+        </button>
+        <button type="button" className="btn" onClick={() => onPick('online')}>
+          온라인 (친구와)
+        </button>
+      </div>
+      <p className="panel__hint">
+        AI 대전은 서버 없이 브라우저 안에서 돌아갑니다. 온라인은 방 코드를 공유해 함께합니다.
+      </p>
     </div>
   );
 }
 
-interface ScoringDetailLike {
-  readonly outcome?: string;
-  readonly reason?: string;
-  readonly won?: boolean;
-  readonly declarerPoints?: number;
-  readonly defenderPoints?: number;
-  readonly baseScore?: number;
-  readonly multiplier?: number;
-  readonly multipliers?: readonly string[];
-  readonly solo?: boolean;
-}
-
-const MULTIPLIER_LABEL: Record<string, string> = {
-  RUN: '런',
-  BACK_RUN: '백런',
-  NO_TRUMP: '노기루다',
-  NO_FRIEND: '노프렌드',
+const AI_NAMES: Record<string, string> = {
+  p1: '나',
+  p2: '봇 2',
+  p3: '봇 3',
+  p4: '봇 4',
+  p5: '봇 5',
 };
 
-function Result({
-  view,
-  score,
-  onNewGame,
-}: {
-  readonly view: MightyView;
-  readonly score: RoundScore | null;
-  readonly onNewGame: () => void;
-}): React.JSX.Element {
-  const detail = (score?.detail ?? {}) as ScoringDetailLike;
-  const redeal = view.outcome?.kind === 'REDEAL';
+function AiMode(): React.JSX.Element {
+  const { state, send, newGame } = useGame();
+  const { view, legal, log, score, error } = state;
+
+  if (view === null) return <p className="loading">딜 중…</p>;
 
   return (
-    <div className="panel">
-      <h2 className="result__title">
-        {redeal
-          ? `재딜 — ${view.outcome?.kind === 'REDEAL' && view.outcome.reason === 'ALL_PASSED' ? '전원 패스' : '재딜 요구'}`
-          : detail.won === true
-            ? '여당 성공'
-            : '여당 실패'}
-      </h2>
+    <SeatNames nameOf={(seat) => AI_NAMES[seat] ?? seat}>
+      <Board
+        view={view}
+        legal={legal}
+        log={log}
+        score={score}
+        error={error}
+        send={send}
+        onNext={() => newGame()}
+        nextLabel="새 게임"
+      />
+    </SeatNames>
+  );
+}
 
-      {!redeal ? (
-        <div className="result__grid">
-          <div>
-            <span className="label">여당 / 야당</span>
-            <strong>
-              {detail.declarerPoints ?? 0} / {detail.defenderPoints ?? 0}
-            </strong>
-          </div>
-          <div>
-            <span className="label">기본 점수</span>
-            <strong>{detail.baseScore ?? 0}</strong>
-          </div>
-          <div>
-            <span className="label">배수</span>
-            <strong>
-              ×{detail.multiplier ?? 1}
-              {(detail.multipliers ?? []).length > 0
-                ? ` (${(detail.multipliers ?? []).map((m) => MULTIPLIER_LABEL[m] ?? m).join(', ')})`
-                : ''}
-            </strong>
-          </div>
-          {detail.solo === true ? (
-            <div>
-              <span className="label">형태</span>
-              <strong>노프렌드</strong>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+function OnlineMode(): React.JSX.Element {
+  const online = useOnline();
+  const { state } = online;
+  const { room, seat, view, connected, error } = state;
 
-      <table className="scores">
-        <tbody>
-          {view.seats.map((seat) => {
-            const value = score?.perPlayer[seat] ?? 0;
-            return (
-              <tr key={seat} className={seat === view.me ? 'scores__me' : ''}>
-                <td>{seatName(seat)}</td>
-                <td>{view.points[seat] ?? 0}점 획득</td>
-                <td className={value > 0 ? 'pos' : value < 0 ? 'neg' : ''}>
-                  {value > 0 ? `+${value}` : value}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+  const nameOf = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of room?.members ?? []) {
+      map.set(m.seat, m.seat === seat ? `${m.nickname} (나)` : m.nickname);
+    }
+    return (s: PlayerId): string => map.get(s) ?? s;
+  }, [room, seat]);
 
-      <button type="button" className="btn btn--primary" onClick={onNewGame}>
-        새 게임
-      </button>
-    </div>
+  if (room === null) {
+    return (
+      <>
+        {error !== null ? <div className="error">{error}</div> : null}
+        <JoinForm connected={connected} onJoin={online.join} />
+      </>
+    );
+  }
+
+  const isHost = seat !== null && room.hostSeat === seat;
+
+  return (
+    <SeatNames nameOf={nameOf}>
+      {!connected ? <div className="error">연결이 끊겼습니다. 다시 연결하는 중…</div> : null}
+      {view === null || !room.started ? (
+        <>
+          {error !== null ? <div className="error">{error}</div> : null}
+          <RoomPanel
+            room={room}
+            seat={seat}
+            onAddBot={online.addBot}
+            onRemoveBot={online.removeBot}
+            onStart={online.start}
+            onLeave={online.leave}
+          />
+        </>
+      ) : (
+        <Board
+          view={view}
+          legal={state.legal}
+          log={state.log}
+          score={state.score}
+          error={error}
+          send={online.send}
+          onNext={isHost ? online.nextRound : null}
+          nextLabel="다음 판"
+        />
+      )}
+    </SeatNames>
   );
 }

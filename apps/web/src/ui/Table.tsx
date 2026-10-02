@@ -2,19 +2,10 @@ import { bidLabel } from '@mightichu/mighty';
 import type { MightyView, PlayerId } from '../game/types.js';
 import { CardBack, CardView } from './Card.js';
 
-const SEAT_LABEL: Record<string, string> = {
-  p1: '나',
-  p2: '봇 2',
-  p3: '봇 3',
-  p4: '봇 4',
-  p5: '봇 5',
-};
-
-export function seatName(player: PlayerId): string {
-  return SEAT_LABEL[player] ?? player;
-}
+import { useSeatName } from './names.js';
 
 export function Header({ view }: { readonly view: MightyView }): React.JSX.Element {
+  const seatName = useSeatName();
   const contract = view.contract;
   return (
     <header className="header">
@@ -95,6 +86,7 @@ function orderedFromMe(seats: readonly PlayerId[], me: PlayerId): readonly Playe
 }
 
 export function Seats({ view }: { readonly view: MightyView }): React.JSX.Element {
+  const seatName = useSeatName();
   const played = new Map(view.currentTrick.map((t) => [t.player, t.card]));
   const ordered = orderedFromMe(view.seats, view.me);
   const turn = nextToPlay(view);

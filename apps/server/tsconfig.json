@@ -2,13 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": ".",
-    "outDir": "dist-types",
-    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
-    "types": ["vite/client"],
-    "jsx": "react-jsx",
-    "noUnusedLocals": true
+    "outDir": "dist",
+    "types": ["node"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"],
+  "include": ["src/**/*.ts", "test/**/*.ts"],
   "references": [
     { "path": "../../packages/core" },
     { "path": "../../packages/mighty" },

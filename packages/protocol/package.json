@@ -1,0 +1,12 @@
+{
+  "name": "@mightichu/protocol",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "서버↔클라 메시지 스키마 — 양쪽이 같은 zod 스키마로 런타임 검증한다",
+  "exports": { ".": { "types": "./src/index.ts", "default": "./src/index.ts" } },
+  "dependencies": {
+    "@mightichu/core": "workspace:*",
+    "zod": "^4.0.0"
+  }
+}

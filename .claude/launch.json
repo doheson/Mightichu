@@ -4,8 +4,22 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@mightichu/web", "dev"],
+      "runtimeArgs": [
+        "--filter",
+        "@mightichu/web",
+        "dev"
+      ],
       "port": 5173
+    },
+    {
+      "name": "server",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@mightichu/server",
+        "dev"
+      ],
+      "port": 3001
     }
   ]
 }

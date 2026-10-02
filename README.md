@@ -13,10 +13,11 @@
 
 ## 현재 상태
 
-**2단계 완료** — 서버 없이 마이티를 끝까지 플레이할 수 있다. 테스트 212개 통과.
+**3단계 완료** — AI 대전과 온라인 멀티플레이 모두 동작한다. 테스트 241개 통과.
 
 ```bash
-pnpm --filter @mightichu/web dev     # http://localhost:5173
+pnpm --filter @mightichu/web dev        # http://localhost:5173
+pnpm --filter @mightichu/server dev     # http://localhost:3001  (온라인 모드용)
 ```
 
 | 패키지 | 상태 |
@@ -25,8 +26,9 @@ pnpm --filter @mightichu/web dev     # http://localhost:5173
 | `packages/mighty` | ✅ 룰 엔진 전체 (비딜·비딩·바닥·프렌드·10트릭·점수) |
 | `packages/tichu` | ⬜ 4단계 |
 | `packages/bots` | ✅ L1 랜덤 + L1.5 기본 봇 (제대로 된 L2 는 5단계) |
-| `apps/web` | ✅ React + Vite, Web Worker 에 엔진 격리 |
-| `apps/server` | ⬜ 3단계 |
+| `apps/web` | ✅ AI 모드(Web Worker) + 온라인 모드(Socket.IO) |
+| `packages/protocol` | ✅ zod 스키마 — 서버·클라 공용 |
+| `apps/server` | ✅ Socket.IO, 인메모리 방, 재접속, 봇 채우기 |
 
 ## 개발
 

@@ -309,3 +309,52 @@ body {
 .scores__me td:first-child { font-weight: 700; }
 .pos { color: var(--pos); }
 .neg { color: var(--neg); }
+
+/* ── 로비 */
+.input {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 14px;
+  min-width: 0;
+  flex: 1 1 140px;
+}
+.input--code {
+  flex: 0 0 110px;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.roomcode {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 20px;
+  letter-spacing: 0.18em;
+}
+
+.members { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.members li {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.members__me { outline: 1px solid var(--accent); }
+.members__empty { opacity: 0.45; }
+.members__name { margin-right: auto; }
+.members__tag {
+  font-size: 11px; padding: 1px 7px; border-radius: 999px;
+  background: var(--border); color: var(--text-dim);
+}
+
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--border);
+  flex: 0 0 auto;
+}
+.dot--on { background: var(--pos); }
+
+.btn--tiny { padding: 3px 9px; font-size: 12px; }
