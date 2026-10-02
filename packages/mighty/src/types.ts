@@ -100,6 +100,8 @@ export interface MightyState {
   readonly jokerNomination: Suit | null;
   /** 획득한 점수카드 수. */
   readonly points: Readonly<Record<PlayerId, number>>;
+  /** 이번 라운드에 이미 나온 카드 전부 (공개 정보). */
+  readonly playedCards: readonly Card[];
   /** 방금 끝난 트릭 (표시 전용). */
   readonly lastTrick: CompletedTrick | null;
 
@@ -169,6 +171,11 @@ export interface MightyView {
   readonly jokerCalled: boolean;
   readonly jokerNomination: Suit | null;
   readonly points: Readonly<Record<PlayerId, number>>;
+  /**
+   * 이번 라운드에 이미 나온 카드 전부. 모두가 보는 앞에서 플레이됐으므로 공개 정보다.
+   * 봇의 카운팅에 쓴다(어떤 높은 카드가 남았는지).
+   */
+  readonly playedCards: readonly Card[];
   /** 방금 끝난 트릭 — 전원 공개 정보다. */
   readonly lastTrick: CompletedTrick | null;
 

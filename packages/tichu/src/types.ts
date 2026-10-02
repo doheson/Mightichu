@@ -131,6 +131,12 @@ export type TichuView = {
   readonly passedThisTrick: readonly PlayerId[];
   readonly wish: number | null;
 
+  /**
+   * 이번 라운드에 **이미 나온 카드 전부**. 공개 정보다 —
+   * 모두가 보는 앞에서 플레이됐으므로 세고 있으면 알 수 있다.
+   * 봇의 카운팅과 UI 의 "남은 카드" 표시에 쓴다.
+   */
+  readonly playedCards: readonly Card[];
   readonly takenCounts: Readonly<Record<PlayerId, number>>;
   readonly takenPoints: Readonly<Record<PlayerId, number>>;
   readonly finished: readonly PlayerId[];

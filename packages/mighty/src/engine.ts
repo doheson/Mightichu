@@ -212,6 +212,7 @@ function deal(ctx: InitContext<MightyConfig>): MightyState {
     jokerCalled: false,
     jokerNomination: null,
     points,
+    playedCards: [],
     lastTrick: null,
     outcome: null,
   };
@@ -572,6 +573,7 @@ function applyAction(
         ...state,
         hands: { ...state.hands, [player]: hand },
         currentTrick: trick,
+        playedCards: [...state.playedCards, action.card],
         friendRevealed,
         jokerCalled: isLeading ? action.callJoker === true : state.jokerCalled,
         jokerNomination: isLeading
@@ -618,6 +620,7 @@ function buildView(state: MightyState, viewer: PlayerId): MightyView {
     jokerCalled: state.jokerCalled,
     jokerNomination: state.jokerNomination,
     points: state.points,
+    playedCards: state.playedCards,
     lastTrick: state.lastTrick,
     outcome: state.outcome,
   };

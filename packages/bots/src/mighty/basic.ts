@@ -1,11 +1,12 @@
 /**
- * 마이티 기본 봇 (L1.5) — 사람이 실제로 상대해볼 수 있는 최소 수준.
- *
- * ⚠️ 이건 **임시 수준**이다. 제대로 된 휴리스틱(L2)은 5단계 과제다.
- * 랜덤 봇만으로는 비딩이 난장판이 되어 플레이 자체가 성립하지 않으므로,
- * 2단계에서 UI 를 검증할 수 있을 정도의 최소 판단만 넣었다.
+ * 마이티 휴리스틱 봇 (L2).
  *
  * 설계 제약: 입력은 **리댁션된 `MightyView`** 뿐이다. 남의 손패를 볼 수 없다.
+ *
+ * L1.5 에서 달라진 점:
+ *  - **공약 추정** 을 무늬 길이 기반으로 다시 짰다. 기루다 장수가 핵심이다
+ *  - **아군 추론** — 프렌드가 숨어 있어도 아는 범위에서는 팀 패를 밟지 않는다
+ *  - **카운팅** — 이미 나온 카드를 보고 내 카드가 최고인지 안다
  */
 
 import type { Bot, BotContext } from '@mightichu/core';
@@ -20,6 +21,7 @@ import {
   mightyCard,
   rankOf,
   resolveLeadSuit,
+  suitOf,
   type Card,
   type MightyAction,
   type MightyView,
@@ -27,24 +29,55 @@ import {
   type TrickContext,
 } from '@mightichu/mighty';
 
-/** 공약 추정 — 손패로 여당이 딸 수 있는 점수카드 수를 거칠게 센다. */
+/**
+ * 공약 추정 — 여당이 딸 수 있는 **점수카드 수**를 센다.
+ *
+ * 마이티에서 점수를 가져오는 경로는 둘뿐이다:
+ *  1. 기루다로 남의 점수 트릭을 베어내기 → 기루다 **장수**가 거의 전부다
+ *  2. 내 무늬의 높은 카드로 직접 먹기
+ *
+ * 그래서 기루다 장수에 가장 큰 가중치를 준다. 바닥 3장을 받으면 보통 기루다가
+ * 늘어나므로 약간의 여유를 더한다.
+ */
 function estimateBid(hand: readonly Card[], trump: Trump): number {
-  const trumps = hand.filter((c) => isTrumpCard(c, trump)).length;
+  const trumps = hand.filter((c) => isTrumpCard(c, trump));
   const hasMighty = hand.includes(mightyCard(trump));
   const hasJoker = hand.includes(JOKER);
-  const offSuitHighs = hand.filter(
+
+  // 기루다 안의 높은 카드는 베어내기에 더 확실하다
+  const highTrumps = trumps.filter((c) => (rankOf(c) ?? 0) >= 12).length;
+
+  // 기루다가 아닌 무늬의 A·K — 직접 먹을 수 있는 카드
+  const offSuitWinners = hand.filter(
     (c) => !isTrumpCard(c, trump) && !isJoker(c) && (rankOf(c) ?? 0) >= 13,
   ).length;
 
+  // 기준 상수는 **측정**으로 잡았다. 7 로 두면 평균 공약 15.18 vs 평균 획득 14.04 —
+  // 한 장씩 과대 공약이라 여당 성공률이 46% 로 손익분기 아래였다.
   const estimate =
-    9 +
-    trumps +
-    (hasMighty ? 2 : 0) +
+    6 +
+    trumps.length * 1.1 +
+    highTrumps * 0.4 +
+    offSuitWinners * 0.8 +
+    (hasMighty ? 1.5 : 0) +
     (hasJoker ? 1 : 0) +
-    offSuitHighs +
-    (trump === 'NT' ? -2 : 0); // 노기루다는 어렵다
+    1.0 + // 바닥 3장 보정
+    (trump === 'NT' ? -3 : 0); // 노기루다는 베어낼 수단이 없다
 
   return Math.min(20, Math.max(0, Math.round(estimate)));
+}
+
+/** 이 카드보다 센 같은 무늬 카드가 아직 남아 있는가 — 카운팅. */
+function isTopOfSuit(card: Card, view: MightyView): boolean {
+  const suit = suitOf(card);
+  const rank = rankOf(card);
+  if (suit === null || rank === null) return false;
+  const seen = new Set<Card>([...view.myHand, ...view.playedCards]);
+  for (let r = rank + 1; r <= 14; r++) {
+    const other = `${suit}${String(r).padStart(2, '0')}`;
+    if (!seen.has(other)) return false;
+  }
+  return true;
 }
 
 /** 가장 아까운 카드 순서 — 값이 작으면 버려도 되는 카드. */
@@ -176,7 +209,23 @@ export function createMightyBasicBot(): Bot<MightyView, MightyAction> {
         const trickHasPoints = view.currentTrick.some((p) => isPointCard(p.card));
 
         if (isLeading) {
-          // 리드: 아깝지 않은 카드부터 내보낸다 (마이티·조커는 아껴둔다)
+          /**
+           * 리드: **확실히 먹을 수 있는 카드**가 있으면 그걸로 간다.
+           * 같은 무늬에서 나보다 센 카드가 전부 나갔다면 그 카드는 안전하다 —
+           * 아껴둘 이유가 없고, 늦게 내면 기루다에 베인다.
+           */
+          const sureWinners = plays.filter((a) => {
+            const card = a.type === 'PLAY_CARD' ? a.card : '';
+            return isTopOfSuit(card, view);
+          });
+          if (sureWinners.length > 0) {
+            return [...sureWinners].sort((a, b) => {
+              const ca = a.type === 'PLAY_CARD' ? a.card : '';
+              const cb = b.type === 'PLAY_CARD' ? b.card : '';
+              return keepValue(cb, trump) - keepValue(ca, trump);
+            })[0] as MightyAction;
+          }
+          // 아니면 아깝지 않은 카드부터 내보낸다 (마이티·조커는 아껴둔다)
           return [...plays].sort((a, b) => {
             const ca = a.type === 'PLAY_CARD' ? a.card : '';
             const cb = b.type === 'PLAY_CARD' ? b.card : '';

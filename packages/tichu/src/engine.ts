@@ -665,11 +665,20 @@ function buildView(state: TichuState, viewer: PlayerId): TichuView {
     (p) => p !== viewer && given[p] === undefined,
   );
 
+  // 이미 나온 카드 — 상태에 따로 담지 않고 유도한다(중복 보관은 틀리기 쉽다)
+  const playedCards: Card[] = [
+    ...state.seats.flatMap((p) => [...(state.taken[p] ?? [])]),
+    ...state.discarded,
+    ...state.currentTrick.flatMap((p) => p.combo.cards),
+    ...(state.dragonGift?.cards ?? []),
+  ];
+
   return {
     me: viewer,
     phase: state.phase,
     seats: state.seats,
     partner: partnerOf(state, viewer),
+    playedCards,
     myHand: handOf(state, viewer),
     handCounts,
     calls: state.calls,

@@ -1,10 +1,14 @@
 /**
- * 티츄 기본 봇 (L1.5) — 사람이 상대해볼 수 있는 최소 수준.
- *
- * ⚠️ 임시 수준이다. 제대로 된 휴리스틱(L2)은 5단계 과제다.
- * 티츄의 진짜 난점은 **핸드 분할**(14장을 어떤 조합들로 쪼갤지)인데 여기서는 다루지 않는다.
+ * 티츄 휴리스틱 봇 (L2).
  *
  * 입력은 리댁션된 `TichuView` 뿐이다 — 남의 손패를 볼 수 없다.
+ *
+ * L1.5 에서 달라진 점:
+ *  - **핸드 분할**(`plan.ts`)로 손패를 낼 단위로 미리 쪼갠다.
+ *    스트레이트가 될 카드를 홑장으로 흘리지 않는다
+ *  - **티츄 선언** 을 손패 가치로 판단한다
+ *  - **카운팅** — 이미 나온 카드를 보고 내 카드가 최고인지 안다
+ *  - **파트너 지원** — 파트너 패를 밟지 않고, 파트너가 티츄를 불렀으면 길을 터준다
  */
 
 import type { Bot, BotContext } from '@mightichu/core';
@@ -21,6 +25,12 @@ import {
   type TichuAction,
   type TichuView,
 } from '@mightichu/tichu';
+import {
+  isHighestLeft,
+  planHand,
+  shouldCallGrandTichu,
+  shouldCallTichu,
+} from './plan.js';
 
 /** 값이 작을수록 내보내기 쉬운 카드. */
 function keepValue(card: Card): number {
@@ -73,12 +83,33 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
 
     decide(ctx: BotContext<TichuView, TichuAction>): TichuAction {
       const { view, legal } = ctx;
+      const hand = view.myHand;
 
-      // ── 라지 티츄는 부르지 않는다 (−200 위험이 크다)
+      // ── 라지 티츄: 8장만 보고 판단하므로 훨씬 보수적으로
+      const grand = legal.find((a) => a.type === 'DECLARE_GRAND');
       const passGrand = legal.find((a) => a.type === 'PASS_GRAND');
-      if (passGrand !== undefined) return passGrand;
+      if (passGrand !== undefined) {
+        if (grand !== undefined && shouldCallGrandTichu(hand)) return grand;
+        return passGrand;
+      }
 
-      // 티츄 선언은 선택지에서 제외한다 (wants 가 이미 걸러주지만 방어적으로)
+      /**
+       * ── 스몰 티츄
+       *
+       * **교환이 끝난 뒤에** 판단한다. 교환 전 손패로 재면 받을 3장을 모르는 채
+       * 재는 셈이라 예측력이 크게 떨어진다(실측: 교환 전 기준 37%, 교환 후 기준 ~50%).
+       * 룰상 첫 카드를 내기 전이면 언제든 선언할 수 있으므로 이게 가능하다.
+       */
+      const callTichu = legal.find((a) => a.type === 'DECLARE_TICHU');
+      if (
+        callTichu !== undefined &&
+        view.phase === 'PLAY' &&
+        view.turn === view.me &&
+        shouldCallTichu(hand)
+      ) {
+        return callTichu;
+      }
+
       const options = legal.filter((a) => a.type !== 'DECLARE_TICHU');
       if (options.length === 0) return legal[0] as TichuAction;
 
@@ -130,8 +161,21 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
         const usable = trickPoints >= 10 ? pool : nonBomb.length > 0 ? nonBomb : pool;
 
         if (leading) {
-          // 리드: 가장 싼 조합부터 털어낸다. 장수가 많으면 더 좋다.
-          return [...usable].sort((a, b) => {
+          /**
+           * 리드는 **계획에 있는 단위**부터 낸다. 계획을 깨면 남은 카드가 애매해진다.
+           * 폭탄은 아껴두고, 통제 카드(최고 카드)는 마지막에 쓴다.
+           */
+          const plan = planHand(hand);
+          const planned = new Set(
+            [...plan.lots].map((lot) => [...lot.cards].sort().join(',')),
+          );
+          const inPlan = usable.filter(
+            (a) => planned.has([...a.cards].sort().join(',')),
+          );
+          const pool2 = inPlan.length > 0 ? inPlan : usable;
+
+          return [...pool2].sort((a, b) => {
+            // 긴 것부터 털고, 같으면 싼 것부터
             const lengthDiff = b.cards.length - a.cards.length;
             if (lengthDiff !== 0) return lengthDiff;
             return comboCost(a.cards) - comboCost(b.cards);
@@ -140,6 +184,15 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
 
         // 파트너가 이기고 있으면 넘긴다 — 우리 팀 점수를 내가 뺏을 이유가 없다
         if (partnerWinning && pass !== undefined) return pass;
+
+        /**
+         * 파트너가 티츄를 불렀으면 **길을 터준다**.
+         * 파트너가 먼저 손을 털어야 성공이므로, 내가 굳이 트릭을 가져가
+         * 리드를 쥐고 있을 이유가 없다. 점수가 큰 트릭만 챙긴다.
+         */
+        const partnerCalled =
+          view.partner !== null && (view.calls[view.partner] ?? 'NONE') !== 'NONE';
+        if (partnerCalled && trickPoints < 10 && pass !== undefined) return pass;
 
         // 따라가기: 점수가 없는 트릭이면 아끼고 패스
         if (trickPoints <= 0 && pass !== undefined && usable.length > 0) {
@@ -150,7 +203,18 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
           if (comboCost(cheapest.cards) > 90) return pass;
           return cheapest;
         }
-        return [...usable].sort((a, b) => comboCost(a.cards) - comboCost(b.cards))[0] as TichuAction;
+        /**
+         * 먹어야 하는 상황 — **최고 카드는 아껴둔다.**
+         * 이미 나온 카드를 세어(카운팅) 내 카드가 최고라면 더 급할 때 쓴다.
+         */
+        const sorted = [...usable].sort((a, b) => comboCost(a.cards) - comboCost(b.cards));
+        const notTopCard = sorted.filter(
+          (a) =>
+            a.cards.length !== 1 ||
+            !isHighestLeft(a.cards[0] as Card, hand, view.playedCards),
+        );
+        const pick = notTopCard.length > 0 && trickPoints < 20 ? notTopCard : sorted;
+        return pick[0] as TichuAction;
       }
 
       if (pass !== undefined) return pass;
