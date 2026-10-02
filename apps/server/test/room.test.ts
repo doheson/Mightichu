@@ -70,6 +70,7 @@ describe('시작', () => {
   it('시작하면 봇이 사람 차례까지 알아서 진행한다', () => {
     const room = roomWith(1);
     expect(room.start(42)).toBeNull();
+    room.drainBots();
     expect(room.started).toBe(true);
     // p1 이 사람 — 사람이 할 일이 있거나 라운드가 이미 끝났다
     const hasWork = room.legalFor('p1').length > 0;
@@ -83,6 +84,7 @@ describe('시작', () => {
     // 봇만 있는 방은 start 가 바로 끝까지 돌린다
     const error = room.start(11);
     expect(error).toBeNull();
+    room.drainBots();
     expect(room.isOver()).toBe(true);
   });
 });
@@ -91,6 +93,7 @@ describe('낙관적 동시성 (seq)', () => {
   it('어긋난 seq 는 거부한다', () => {
     const room = roomWith(1);
     room.start(42);
+    room.drainBots();
     if (room.legalFor('p1').length === 0) return;
     const action = room.legalFor('p1')[0];
     const stale = room.applyHuman('p1', room.seq + 99, action);
@@ -100,6 +103,7 @@ describe('낙관적 동시성 (seq)', () => {
   it('맞는 seq 는 통과하고 seq 가 올라간다', () => {
     const room = roomWith(1);
     room.start(42);
+    room.drainBots();
     if (room.legalFor('p1').length === 0) return;
     const before = room.seq;
     const error = room.applyHuman('p1', before, room.legalFor('p1')[0]);
@@ -110,6 +114,7 @@ describe('낙관적 동시성 (seq)', () => {
   it('불법 액션은 엔진 오류 코드를 그대로 돌려준다', () => {
     const room = roomWith(1);
     room.start(42);
+    room.drainBots();
     const error = room.applyHuman('p1', room.seq, { type: 'PLAY_CARD', card: 'S14' });
     expect(error).not.toBeNull();
   });
@@ -154,12 +159,14 @@ describe('매치 누적 점수', () => {
     for (let i = 0; i < 5; i++) room.addBot();
     room.hostSeat = 'p1';
     room.start(5);
+    room.drainBots();
     expect(room.isOver()).toBe(true);
     const first = { ...room.totals };
     const sum = Object.values(first).reduce((a, b) => a + b, 0);
     expect(sum).toBe(0); // 제로섬
 
     room.nextRound(6);
+    room.drainBots();
     expect(room.isOver()).toBe(true);
     const second = Object.values(room.totals).reduce((a, b) => a + b, 0);
     expect(second).toBe(0);
@@ -168,6 +175,7 @@ describe('매치 누적 점수', () => {
   it('라운드 진행 중에는 다음 라운드를 시작할 수 없다', () => {
     const room = roomWith(1);
     room.start(42);
+    room.drainBots();
     if (room.isOver()) return;
     expect(room.nextRound()).toMatchObject({ code: 'ROUND_RUNNING' });
   });

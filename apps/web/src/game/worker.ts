@@ -31,9 +31,22 @@ const SEAT_LABEL: Record<PlayerId, string> = {
   p5: '봇 5',
 };
 
+/**
+ * 연출 간격.
+ *
+ * 봇을 한꺼번에 처리하면 사람은 **봇들이 뭘 냈는지도, 누가 먹었는지도** 볼 수 없다.
+ * 한 수마다 뷰를 내보내고 간격을 둔다.
+ */
+const BOT_STEP_MS = 650;
+const TRICK_HOLD_MS = 1500;
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
 const bot = createMightyBasicBot();
 
 let state: MightyState | null = null;
+/** 봇 루프 중복 구동 방지. */
+let driving = false;
 let rng: Rng = createRng(1);
 let log: string[] = [];
 
@@ -107,44 +120,64 @@ function publish(): void {
   }
 }
 
-/** 사람 차례가 오거나 라운드가 끝날 때까지 봇을 돌린다. */
-function advance(): void {
-  if (state === null) return;
-  let guard = 0;
-  while (!mightyEngine.isOver(state) && guard++ < 500) {
-    if (mightyEngine.legalActions(state, HUMAN).length > 0) break;
+/** 방금 끝난 트릭 번호 — 바뀌면 트릭이 완성된 것. */
+function trickMarker(): number {
+  return state?.lastTrick?.trickNo ?? -1;
+}
 
-    const actor = SEATS.find(
-      (p) => p !== HUMAN && mightyEngine.legalActions(state as MightyState, p).length > 0,
-    );
-    if (actor === undefined) break;
+/** 사람 차례가 오거나 라운드가 끝날 때까지, **한 수씩 간격을 두고** 봇을 돌린다. */
+async function advance(): Promise<void> {
+  if (driving) return;
+  driving = true;
+  try {
+    let guard = 0;
+    while (state !== null && !mightyEngine.isOver(state) && guard++ < 500) {
+      if (mightyEngine.legalActions(state, HUMAN).length > 0) break;
 
-    const decided = bot.decide({
-      me: actor,
-      view: mightyEngine.view(state, actor),
-      legal: mightyEngine.legalActions(state, actor),
-      rng,
-    });
-    if (decided instanceof Promise) {
-      post({ type: 'ERROR', message: '비동기 봇은 아직 지원하지 않습니다.' });
-      return;
-    }
+      const actor = SEATS.find(
+        (p) => p !== HUMAN && mightyEngine.legalActions(state as MightyState, p).length > 0,
+      );
+      if (actor === undefined) break;
 
-    const applied = mightyEngine.apply(state, actor, decided);
-    if (!applied.ok) {
-      post({
-        type: 'ERROR',
-        message: `봇이 불법 액션을 냈습니다: ${applied.error.code} ${applied.error.message}`,
+      await sleep(BOT_STEP_MS);
+
+      const decided = bot.decide({
+        me: actor,
+        view: mightyEngine.view(state, actor),
+        legal: mightyEngine.legalActions(state, actor),
+        rng,
       });
-      return;
+      if (decided instanceof Promise) {
+        post({ type: 'ERROR', message: '비동기 봇은 아직 지원하지 않습니다.' });
+        return;
+      }
+
+      const before = trickMarker();
+      const applied = mightyEngine.apply(state, actor, decided);
+      if (!applied.ok) {
+        post({
+          type: 'ERROR',
+          message: `봇이 불법 액션을 냈습니다: ${applied.error.code} ${applied.error.message}`,
+        });
+        return;
+      }
+      state = applied.value.state;
+      record(applied.value.events);
+      publish();
+
+      if (trickMarker() !== before) await sleep(TRICK_HOLD_MS);
     }
-    state = applied.value.state;
-    for (const event of applied.value.events) {
-      const line = describe(event);
-      if (line !== null) log.push(line);
-    }
+  } finally {
+    driving = false;
   }
   publish();
+}
+
+function record(events: readonly { type: string; payload?: unknown; visibleTo?: readonly PlayerId[] }[]): void {
+  for (const event of events) {
+    const line = describe(event);
+    if (line !== null) log.push(line);
+  }
 }
 
 self.onmessage = (message: MessageEvent<ToWorker>): void => {
@@ -154,7 +187,8 @@ self.onmessage = (message: MessageEvent<ToWorker>): void => {
     rng = createRng(data.seed ^ 0x5bf03635);
     log = [];
     state = mightyEngine.init({ config: {}, players: SEATS, seed: data.seed });
-    advance();
+    publish();
+    void advance();
     return;
   }
 
@@ -169,11 +203,12 @@ self.onmessage = (message: MessageEvent<ToWorker>): void => {
       publish();
       return;
     }
+    const before = trickMarker();
     state = applied.value.state;
-    for (const event of applied.value.events) {
-      const line = describe(event);
-      if (line !== null) log.push(line);
-    }
-    advance();
+    record(applied.value.events);
+    publish();
+    // 사람이 트릭을 끝냈으면 결과를 보여줄 시간을 준다
+    const held = trickMarker() !== before ? sleep(TRICK_HOLD_MS) : Promise.resolve();
+    void held.then(() => advance());
   }
 };

@@ -87,14 +87,29 @@ function orderedFromMe(seats: readonly PlayerId[], me: PlayerId): readonly Playe
 
 export function Seats({ view }: { readonly view: MightyView }): React.JSX.Element {
   const seatName = useSeatName();
-  const played = new Map(view.currentTrick.map((t) => [t.player, t.card]));
   const ordered = orderedFromMe(view.seats, view.me);
   const turn = nextToPlay(view);
 
+  /**
+   * 트릭이 끝나면 엔진이 `currentTrick` 을 비우므로, 그대로 두면
+   * **봇들이 뭘 냈는지도 누가 먹었는지도** 볼 수 없다.
+   * 진행 중인 트릭이 없으면 방금 끝난 트릭을 대신 보여준다.
+   */
+  const showingLast = view.currentTrick.length === 0 && view.lastTrick !== null;
+  const shown = showingLast ? (view.lastTrick?.plays ?? []) : view.currentTrick;
+  const winner = showingLast ? (view.lastTrick?.winner ?? null) : null;
+  const wonPoints = showingLast ? (view.lastTrick?.points ?? 0) : 0;
+  const played = new Map(shown.map((t) => [t.player, t.card]));
+
   return (
-    <div className="table">
+    <div className={`table ${showingLast ? 'table--resolved' : ''}`}>
       <div className="table__center">
-        {view.phase === 'PLAY' ? (
+        {showingLast && winner !== null ? (
+          <>
+            <span className="table__winner">{seatName(winner)} 획득</span>
+            <span className="table__hint">{wonPoints > 0 ? `+${wonPoints}점` : '0점'}</span>
+          </>
+        ) : view.phase === 'PLAY' ? (
           <>
             <span className="table__trickno">{view.trickNo + 1} / 10</span>
             <span className="table__hint">트릭</span>
@@ -109,6 +124,7 @@ export function Seats({ view }: { readonly view: MightyView }): React.JSX.Elemen
         const isTurn =
           (view.phase === 'BIDDING' && view.currentBidder === seat) ||
           (view.phase === 'PLAY' && turn === seat);
+        const isWinner = winner === seat;
         return (
           <div key={`seat-${seat}`}>
             <div
@@ -116,6 +132,7 @@ export function Seats({ view }: { readonly view: MightyView }): React.JSX.Elemen
                 'seat',
                 seat === view.me ? 'seat--me' : '',
                 isTurn ? 'seat--turn' : '',
+                isWinner ? 'seat--won' : '',
                 view.passed.includes(seat) && view.phase === 'BIDDING' ? 'seat--passed' : '',
               ]
                 .filter(Boolean)
@@ -134,9 +151,17 @@ export function Seats({ view }: { readonly view: MightyView }): React.JSX.Elemen
               {view.passed.includes(seat) && view.phase === 'BIDDING' ? (
                 <div className="seat__tag">패스</div>
               ) : null}
+              {isWinner ? (
+                <div className="seat__tag seat__tag--won">
+                  획득{wonPoints > 0 ? ` +${wonPoints}` : ''}
+                </div>
+              ) : null}
             </div>
 
-            <div className="trickslot" style={polar(index, ordered.length, 0.44)}>
+            <div
+              className={`trickslot ${isWinner ? 'trickslot--won' : ''}`}
+              style={polar(index, ordered.length, 0.44)}
+            >
               {card === undefined ? null : <CardView card={card} small disabled />}
             </div>
           </div>

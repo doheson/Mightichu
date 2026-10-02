@@ -19,6 +19,17 @@ import type { PlayerId } from '@mightichu/core';
 import { RoomRegistry } from './rooms.js';
 import type { Room } from './room.js';
 
+export interface AppOptions {
+  readonly origin?: string;
+  /**
+   * 봇이 생각하는 시간(ms). 사람이 **봇들이 뭘 냈는지** 볼 수 있어야 하므로
+   * 한 수마다 뷰를 내보내고 간격을 둔다. 테스트는 0 으로 둔다.
+   */
+  readonly botStepMs?: number;
+  /** 트릭이 끝난 뒤 "누가 먹었는지" 를 보여주는 시간(ms). */
+  readonly trickHoldMs?: number;
+}
+
 export interface AppHandle {
   readonly http: ReturnType<typeof createServer>;
   readonly io: Server;
@@ -27,8 +38,11 @@ export interface AppHandle {
 }
 
 /** 서버를 만든다(listen 은 호출부에서). 테스트가 임의 포트로 띄울 수 있게 분리했다. */
-export function createApp(origin = '*'): AppHandle {
-const ORIGIN = origin;
+export function createApp(options: AppOptions | string = {}): AppHandle {
+const opts: AppOptions = typeof options === 'string' ? { origin: options } : options;
+const ORIGIN = opts.origin ?? '*';
+const BOT_STEP_MS = opts.botStepMs ?? 650;
+const TRICK_HOLD_MS = opts.trickHoldMs ?? 1500;
 
 const registry = new RoomRegistry();
 const http = createServer((req, res) => {
@@ -46,6 +60,8 @@ const io = new Server(http, { cors: { origin: ORIGIN } });
 function send(socket: Socket, message: ServerMessage): void {
   socket.emit(CHANNEL.server, message);
 }
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 function fail(socket: Socket, code: string, message: string): void {
   send(socket, { type: 'ERROR', code, message });
@@ -87,6 +103,27 @@ function sendViews(room: Room): void {
       io.to(member.socketId).emit(CHANNEL.server, message);
     }
   }
+}
+
+/**
+ * 봇을 한 수씩 두며 매번 뷰를 내보낸다.
+ * 방당 하나만 돌고, 사람 액션이 중간에 들어와도 다음 반복에서 최신 상태를 다시 읽는다.
+ */
+async function driveBots(room: Room): Promise<void> {
+  if (room.botLoopRunning) return;
+  room.botLoopRunning = true;
+  try {
+    for (let guard = 0; guard < 500; guard++) {
+      await sleep(BOT_STEP_MS);
+      const step = room.stepBot();
+      if (step === null) break;
+      sendViews(room);
+      if (step.trickCompleted) await sleep(TRICK_HOLD_MS);
+    }
+  } finally {
+    room.botLoopRunning = false;
+  }
+  sendViews(room);
 }
 
 io.on('connection', (socket) => {
@@ -175,6 +212,7 @@ io.on('connection', (socket) => {
         }
         broadcastRoom(room);
         sendViews(room);
+        void driveBots(room);
         return;
       }
       case 'NEXT_ROUND': {
@@ -188,12 +226,14 @@ io.on('connection', (socket) => {
           return;
         }
         sendViews(room);
+        void driveBots(room);
         return;
       }
       case 'ACTION': {
         const error = room.applyHuman(me.seat, message.seq, message.action);
         if (error !== null) fail(socket, error.code, error.message);
         sendViews(room);
+        void driveBots(room);
         return;
       }
     }

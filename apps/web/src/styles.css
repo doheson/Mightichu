@@ -358,3 +358,22 @@ body {
 .dot--on { background: var(--pos); }
 
 .btn--tiny { padding: 3px 9px; font-size: 12px; }
+
+/* ── 끝난 트릭 표시 */
+.table--resolved { box-shadow: inset 0 0 40px rgb(0 0 0 / 0.35), 0 0 0 2px color-mix(in srgb, #ffd964 45%, transparent); }
+
+.table__winner {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffd964;
+  white-space: nowrap;
+}
+
+.seat--won {
+  border-color: #ffd964;
+  box-shadow: 0 0 0 2px #ffd964, 0 0 16px color-mix(in srgb, #ffd964 50%, transparent);
+}
+.seat__tag--won { background: #ffd964; color: #2a2300; font-weight: 700; }
+
+.trickslot { transition: transform 0.25s ease, opacity 0.25s ease; }
+.trickslot--won .card { outline: 2px solid #ffd964; outline-offset: 1px; }

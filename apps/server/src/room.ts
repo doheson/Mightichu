@@ -47,6 +47,10 @@ export class Room {
   roundLog: RoundLog<unknown, unknown> | null = null;
   totals: Record<PlayerId, number> = {};
   lastActivity = Date.now();
+  /** 라운드 점수를 totals 에 한 번만 더하기 위한 가드. */
+  private settled = false;
+  /** 봇 루프가 이미 돌고 있는지 — 중복 구동을 막는다. */
+  botLoopRunning = false;
 
   private rng: Rng = createRng(1);
 
@@ -168,7 +172,7 @@ export class Room {
     this.seq = 0;
     this.state = this.entry.engine.init({ config: {} as never, players, seed });
     this.roundLog = createRoundLog('', {}, players, seed) as RoundLog<unknown, unknown>;
-    this.runBots();
+    this.settled = false;
     this.touch();
   }
 
@@ -189,47 +193,74 @@ export class Room {
       seat,
       action,
     ) as RoundLog<unknown, unknown>;
-    this.runBots();
+    this.settle();
     this.touch();
     return null;
   }
 
-  /** 행동 가능한 봇을 전부 돌린다. 사람이 기다리는지는 신경 쓰지 않는다. */
-  private runBots(): void {
+  /**
+   * 봇 한 수만 둔다. 둘 수 있는 봇이 없으면 null.
+   *
+   * 루프가 아니라 **한 수 단위**인 이유: 사람이 "봇들이 뭘 냈는지" 를 볼 수 있어야 하므로,
+   * 호출부(서버)가 수 사이에 간격을 두고 매번 뷰를 내보낸다.
+   */
+  stepBot(): { seat: PlayerId; trickCompleted: boolean } | null {
     const engine = this.entry.engine;
-    let guard = 0;
-    while (this.state !== null && !engine.isOver(this.state as never) && guard++ < 500) {
-      const botSeat = this.members.find(
-        (m) => m.isBot && engine.legalActions(this.state as never, m.seat).length > 0,
-      );
-      if (botSeat === undefined) break;
+    if (this.state === null || engine.isOver(this.state as never)) return null;
 
-      const decided = this.entry.bot.decide({
-        me: botSeat.seat,
-        view: engine.view(this.state as never, botSeat.seat),
-        legal: engine.legalActions(this.state as never, botSeat.seat),
-        rng: this.rng,
-      });
-      if (decided instanceof Promise) break;
+    const bot = this.members.find(
+      (m) => m.isBot && engine.legalActions(this.state as never, m.seat).length > 0,
+    );
+    if (bot === undefined) return null;
 
-      const result = engine.apply(this.state as never, botSeat.seat, decided);
-      if (!result.ok) break;
-      this.state = result.value.state;
-      this.seq += 1;
-      this.record(result.value.events);
-      this.roundLog = appendAction(
-        this.roundLog as RoundLog<unknown, unknown>,
-        botSeat.seat,
-        decided,
-      ) as RoundLog<unknown, unknown>;
+    const decided = this.entry.bot.decide({
+      me: bot.seat,
+      view: engine.view(this.state as never, bot.seat),
+      legal: engine.legalActions(this.state as never, bot.seat),
+      rng: this.rng,
+    });
+    if (decided instanceof Promise) return null;
+
+    const before = this.trickMarker();
+    const result = engine.apply(this.state as never, bot.seat, decided);
+    if (!result.ok) return null;
+
+    this.state = result.value.state;
+    this.seq += 1;
+    this.record(result.value.events);
+    this.roundLog = appendAction(
+      this.roundLog as RoundLog<unknown, unknown>,
+      bot.seat,
+      decided,
+    ) as RoundLog<unknown, unknown>;
+    this.settle();
+    this.touch();
+
+    return { seat: bot.seat, trickCompleted: this.trickMarker() !== before };
+  }
+
+  /** 간격 없이 끝까지 — 테스트와 봇만 있는 방의 빠른 경로. */
+  drainBots(limit = 500): number {
+    let steps = 0;
+    while (steps < limit && this.stepBot() !== null) steps++;
+    return steps;
+  }
+
+  /** 방금 끝난 트릭의 번호. 바뀌면 트릭이 완성된 것. */
+  private trickMarker(): number {
+    const state = this.state as { lastTrick?: { trickNo: number } | null } | null;
+    return state?.lastTrick?.trickNo ?? -1;
+  }
+
+  /** 라운드가 끝났으면 점수를 누적한다. 두 번 더하지 않는다. */
+  private settle(): void {
+    const engine = this.entry.engine;
+    if (this.settled || this.state === null || !engine.isOver(this.state as never)) return;
+    const score = engine.score(this.state as never);
+    for (const [seat, delta] of Object.entries(score.perPlayer)) {
+      this.totals[seat] = (this.totals[seat] ?? 0) + delta;
     }
-
-    if (this.state !== null && engine.isOver(this.state as never)) {
-      const score = engine.score(this.state as never);
-      for (const [seat, delta] of Object.entries(score.perPlayer)) {
-        this.totals[seat] = (this.totals[seat] ?? 0) + delta;
-      }
-    }
+    this.settled = true;
   }
 
   private record(events: readonly GameEvent[]): void {

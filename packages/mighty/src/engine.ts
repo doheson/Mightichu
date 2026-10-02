@@ -60,6 +60,7 @@ import { computeScore, redealScore } from './scoring.js';
 import type {
   Bid,
   Card,
+  CompletedTrick,
   FriendCall,
   MightyAction,
   MightyConfig,
@@ -211,6 +212,7 @@ function deal(ctx: InitContext<MightyConfig>): MightyState {
     jokerCalled: false,
     jokerNomination: null,
     points,
+    lastTrick: null,
     outcome: null,
   };
 }
@@ -362,8 +364,16 @@ function finishTrick(state: MightyState): Applied<MightyState> {
   const nextTrickNo = state.trickNo + 1;
   const done = nextTrickNo >= TRICKS_PER_ROUND;
 
+  const completed: CompletedTrick = {
+    trickNo: state.trickNo,
+    plays: state.currentTrick,
+    winner,
+    points: gained,
+  };
+
   const next: MightyState = {
     ...state,
+    lastTrick: completed,
     phase: done ? 'DONE' : 'PLAY',
     points,
     friend,
@@ -608,6 +618,7 @@ function buildView(state: MightyState, viewer: PlayerId): MightyView {
     jokerCalled: state.jokerCalled,
     jokerNomination: state.jokerNomination,
     points: state.points,
+    lastTrick: state.lastTrick,
     outcome: state.outcome,
   };
 }

@@ -37,6 +37,23 @@ export type TrickPlay = {
   readonly card: Card;
 };
 
+/**
+ * 방금 끝난 트릭. **표시 전용**이다.
+ *
+ * 엔진은 5번째 카드가 나오는 순간 `currentTrick` 을 비우므로,
+ * 그대로 두면 UI 가 "누가 뭘 냈고 누가 먹었는지" 를 영원히 볼 수 없다.
+ * 다음 트릭의 첫 카드가 나올 때까지 이 값이 남아 있고,
+ * UI 는 `currentTrick` 이 비었을 때 이걸 대신 보여준다.
+ *
+ * 점수·보존 계산에는 쓰지 않는다 — `points` 에 이미 반영돼 있다.
+ */
+export type CompletedTrick = {
+  readonly trickNo: number;
+  readonly plays: readonly TrickPlay[];
+  readonly winner: PlayerId;
+  readonly points: number;
+};
+
 export type RoundOutcome =
   | { readonly kind: 'REDEAL'; readonly reason: 'MISDEAL' | 'ALL_PASSED' }
   | { readonly kind: 'PLAYED' };
@@ -83,6 +100,8 @@ export interface MightyState {
   readonly jokerNomination: Suit | null;
   /** 획득한 점수카드 수. */
   readonly points: Readonly<Record<PlayerId, number>>;
+  /** 방금 끝난 트릭 (표시 전용). */
+  readonly lastTrick: CompletedTrick | null;
 
   readonly outcome: RoundOutcome | null;
 }
@@ -150,6 +169,8 @@ export interface MightyView {
   readonly jokerCalled: boolean;
   readonly jokerNomination: Suit | null;
   readonly points: Readonly<Record<PlayerId, number>>;
+  /** 방금 끝난 트릭 — 전원 공개 정보다. */
+  readonly lastTrick: CompletedTrick | null;
 
   readonly outcome: RoundOutcome | null;
 }

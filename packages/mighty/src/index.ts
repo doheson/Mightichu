@@ -56,6 +56,7 @@ export { BACK_RUN_THRESHOLD, computeScore, redealScore } from './scoring.js';
 export type {
   Bid,
   Card,
+  CompletedTrick,
   FriendCall,
   MightyAction,
   MightyConfig,

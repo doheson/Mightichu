@@ -16,7 +16,8 @@ let app: ReturnType<typeof createApp>;
 let url: string;
 
 beforeAll(async () => {
-  app = createApp();
+  // 테스트에서는 봇 연출 지연을 끈다
+  app = createApp({ botStepMs: 0, trickHoldMs: 0 });
   await new Promise<void>((resolve) => app.http.listen(0, resolve));
   const address = app.http.address() as AddressInfo;
   url = `http://localhost:${address.port}`;
