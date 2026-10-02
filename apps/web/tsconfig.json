@@ -12,6 +12,7 @@
   "references": [
     { "path": "../../packages/core" },
     { "path": "../../packages/mighty" },
+    { "path": "../../packages/tichu" },
     { "path": "../../packages/bots" },
     { "path": "../../packages/protocol" }
   ]

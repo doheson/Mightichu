@@ -1,31 +1,35 @@
-/** 워커를 감싼 React 훅. UI 는 뷰와 합법 수만 다룬다. */
+/** AI 모드 — 워커를 감싼 훅. 게임에 무관하다. */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FromWorker, ToWorker } from './protocol.js';
-import type { MightyAction, MightyView, RoundScore } from './types.js';
+import type { GameId } from './registry.js';
 
 export interface GameState {
-  readonly view: MightyView | null;
-  readonly legal: readonly MightyAction[];
+  readonly game: GameId;
+  readonly view: unknown;
+  readonly legal: readonly unknown[];
   readonly log: readonly string[];
-  readonly score: RoundScore | null;
+  readonly score: unknown;
   readonly error: string | null;
 }
 
-const EMPTY: GameState = { view: null, legal: [], log: [], score: null, error: null };
-
-export function useGame(): {
+export function useGame(game: GameId): {
   state: GameState;
-  send: (action: MightyAction) => void;
+  send: (action: unknown) => void;
   newGame: (seed?: number) => void;
 } {
   const workerRef = useRef<Worker | null>(null);
-  const [state, setState] = useState<GameState>(EMPTY);
+  const [state, setState] = useState<GameState>({
+    game,
+    view: null,
+    legal: [],
+    log: [],
+    score: null,
+    error: null,
+  });
 
   useEffect(() => {
-    const worker = new Worker(new URL('./worker.ts', import.meta.url), {
-      type: 'module',
-    });
+    const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
     workerRef.current = worker;
 
     worker.onmessage = (message: MessageEvent<FromWorker>): void => {
@@ -33,12 +37,13 @@ export function useGame(): {
       if (data.type === 'STATE') {
         setState((prev) => ({
           ...prev,
+          game: data.game,
           view: data.view,
           legal: data.legal,
           log: data.log,
           error: null,
-          // 새 라운드가 시작되면 이전 점수를 지운다
-          score: data.view.outcome === null ? null : prev.score,
+          score:
+            (data.view as { outcome?: unknown } | null)?.outcome == null ? null : prev.score,
         }));
       } else if (data.type === 'SCORE') {
         setState((prev) => ({ ...prev, score: data.score }));
@@ -47,26 +52,33 @@ export function useGame(): {
       }
     };
 
-    const seed = Math.floor(Math.random() * 2 ** 31);
-    worker.postMessage({ type: 'NEW_GAME', seed } satisfies ToWorker);
+    worker.postMessage({
+      type: 'NEW_GAME',
+      game,
+      seed: Math.floor(Math.random() * 2 ** 31),
+    } satisfies ToWorker);
 
     return () => {
       worker.terminate();
       workerRef.current = null;
     };
-  }, []);
+  }, [game]);
 
-  const send = useCallback((action: MightyAction) => {
+  const send = useCallback((action: unknown) => {
     workerRef.current?.postMessage({ type: 'ACTION', action } satisfies ToWorker);
   }, []);
 
-  const newGame = useCallback((seed?: number) => {
-    setState(EMPTY);
-    workerRef.current?.postMessage({
-      type: 'NEW_GAME',
-      seed: seed ?? Math.floor(Math.random() * 2 ** 31),
-    } satisfies ToWorker);
-  }, []);
+  const newGame = useCallback(
+    (seed?: number) => {
+      setState((prev) => ({ ...prev, view: null, score: null, log: [], error: null }));
+      workerRef.current?.postMessage({
+        type: 'NEW_GAME',
+        game,
+        seed: seed ?? Math.floor(Math.random() * 2 ** 31),
+      } satisfies ToWorker);
+    },
+    [game],
+  );
 
   return { state, send, newGame };
 }

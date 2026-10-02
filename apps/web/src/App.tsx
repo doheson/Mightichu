@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useGame } from './game/useGame.js';
 import { useOnline } from './game/useOnline.js';
-import type { PlayerId } from './game/types.js';
+import { GAMES, type GameId } from './game/registry.js';
+import type { MightyAction, MightyView, PlayerId } from './game/types.js';
+import type { TichuAction, TichuView } from './game/tichuTypes.js';
 import { Board } from './ui/Board.js';
+import { TichuBoard } from './ui/tichu/TichuBoard.js';
 import { JoinForm, RoomPanel } from './ui/Lobby.js';
 import { SeatNames } from './ui/names.js';
 
@@ -10,13 +13,16 @@ type Mode = 'menu' | 'ai' | 'online';
 
 export default function App(): React.JSX.Element {
   const [mode, setMode] = useState<Mode>('menu');
+  const [game, setGame] = useState<GameId>('mighty');
 
   return (
     <main className="app">
       <div className="topbar">
         <h1 className="title">Mightichu</h1>
         <span className="subtitle">
-          마이티 {mode === 'ai' ? '· AI 대전' : mode === 'online' ? '· 온라인' : ''}
+          {mode === 'menu'
+            ? '마이티 · 티츄'
+            : `${GAMES[game].label} · ${mode === 'ai' ? 'AI 대전' : '온라인'}`}
         </span>
         {mode !== 'menu' ? (
           <button type="button" className="btn btn--ghost" onClick={() => setMode('menu')}>
@@ -25,22 +31,49 @@ export default function App(): React.JSX.Element {
         ) : null}
       </div>
 
-      {mode === 'menu' ? <Menu onPick={setMode} /> : null}
-      {mode === 'ai' ? <AiMode /> : null}
-      {mode === 'online' ? <OnlineMode /> : null}
+      {mode === 'menu' ? (
+        <Menu
+          game={game}
+          onPickGame={setGame}
+          onPickMode={(m) => setMode(m)}
+        />
+      ) : null}
+      {mode === 'ai' ? <AiMode game={game} /> : null}
+      {mode === 'online' ? <OnlineMode game={game} /> : null}
     </main>
   );
 }
 
-function Menu({ onPick }: { readonly onPick: (mode: Mode) => void }): React.JSX.Element {
+function Menu({
+  game,
+  onPickGame,
+  onPickMode,
+}: {
+  readonly game: GameId;
+  readonly onPickGame: (game: GameId) => void;
+  readonly onPickMode: (mode: Mode) => void;
+}): React.JSX.Element {
   return (
     <div className="panel">
-      <p className="panel__hint">어떻게 플레이할까요?</p>
+      <p className="panel__hint">게임을 고르세요.</p>
+      <div className="gamepick">
+        {(Object.keys(GAMES) as GameId[]).map((id) => (
+          <button
+            key={id}
+            type="button"
+            className={`gamecard ${game === id ? 'gamecard--on' : ''}`}
+            onClick={() => onPickGame(id)}
+          >
+            <span className="gamecard__name">{GAMES[id].label}</span>
+            <span className="gamecard__sub">{GAMES[id].subtitle}</span>
+          </button>
+        ))}
+      </div>
       <div className="panel__row">
-        <button type="button" className="btn btn--primary" onClick={() => onPick('ai')}>
+        <button type="button" className="btn btn--primary" onClick={() => onPickMode('ai')}>
           AI 대전 (혼자)
         </button>
-        <button type="button" className="btn" onClick={() => onPick('online')}>
+        <button type="button" className="btn" onClick={() => onPickMode('online')}>
           온라인 (친구와)
         </button>
       </div>
@@ -59,15 +92,16 @@ const AI_NAMES: Record<string, string> = {
   p5: '봇 5',
 };
 
-function AiMode(): React.JSX.Element {
-  const { state, send, newGame } = useGame();
+function AiMode({ game }: { readonly game: GameId }): React.JSX.Element {
+  const { state, send, newGame } = useGame(game);
   const { view, legal, log, score, error } = state;
 
   if (view === null) return <p className="loading">딜 중…</p>;
 
   return (
     <SeatNames nameOf={(seat) => AI_NAMES[seat] ?? seat}>
-      <Board
+      <GameBoard
+        game={game}
         view={view}
         legal={legal}
         log={log}
@@ -81,7 +115,7 @@ function AiMode(): React.JSX.Element {
   );
 }
 
-function OnlineMode(): React.JSX.Element {
+function OnlineMode({ game }: { readonly game: GameId }): React.JSX.Element {
   const online = useOnline();
   const { state } = online;
   const { room, seat, view, connected, error } = state;
@@ -98,7 +132,11 @@ function OnlineMode(): React.JSX.Element {
     return (
       <>
         {error !== null ? <div className="error">{error}</div> : null}
-        <JoinForm connected={connected} onJoin={online.join} />
+        <JoinForm
+          connected={connected}
+          gameLabel={GAMES[game].label}
+          onJoin={(nickname, roomId) => online.join(nickname, game, roomId)}
+        />
       </>
     );
   }
@@ -121,7 +159,8 @@ function OnlineMode(): React.JSX.Element {
           />
         </>
       ) : (
-        <Board
+        <GameBoard
+          game={state.game}
           view={view}
           legal={state.legal}
           log={state.log}
@@ -133,5 +172,44 @@ function OnlineMode(): React.JSX.Element {
         />
       )}
     </SeatNames>
+  );
+}
+
+/** 게임별 보드 분기 — 여기 말고는 UI 가 게임을 구분하지 않는다. */
+function GameBoard(props: {
+  readonly game: GameId;
+  readonly view: unknown;
+  readonly legal: readonly unknown[];
+  readonly log: readonly string[];
+  readonly score: unknown;
+  readonly error: string | null;
+  readonly send: (action: unknown) => void;
+  readonly onNext: (() => void) | null;
+  readonly nextLabel: string;
+}): React.JSX.Element {
+  const common = {
+    log: props.log,
+    score: props.score as never,
+    error: props.error,
+    onNext: props.onNext,
+    nextLabel: props.nextLabel,
+  };
+  if (props.game === 'tichu') {
+    return (
+      <TichuBoard
+        {...common}
+        view={props.view as TichuView}
+        legal={props.legal as readonly TichuAction[]}
+        send={props.send as (a: TichuAction) => void}
+      />
+    );
+  }
+  return (
+    <Board
+      {...common}
+      view={props.view as MightyView}
+      legal={props.legal as readonly MightyAction[]}
+      send={props.send as (a: MightyAction) => void}
+    />
   );
 }

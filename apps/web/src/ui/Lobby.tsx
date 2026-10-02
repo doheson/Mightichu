@@ -6,9 +6,11 @@ import type { PlayerId } from '../game/types.js';
 
 export function JoinForm({
   connected,
+  gameLabel,
   onJoin,
 }: {
   readonly connected: boolean;
+  readonly gameLabel: string;
   readonly onJoin: (nickname: string, roomId?: string) => void;
 }): React.JSX.Element {
   const [nickname, setNickname] = useState('');
@@ -18,7 +20,7 @@ export function JoinForm({
   return (
     <div className="panel">
       <p className="panel__hint">
-        {connected ? '방을 만들거나 코드로 입장하세요.' : '서버에 연결하는 중…'}
+        {connected ? `${gameLabel} — 방을 만들거나 코드로 입장하세요.` : '서버에 연결하는 중…'}
       </p>
       <div className="panel__row">
         <input

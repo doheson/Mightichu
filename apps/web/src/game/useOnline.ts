@@ -9,7 +9,8 @@
 import { CHANNEL, type ClientMessage, type RoomInfo, type ServerMessage } from '@mightichu/protocol';
 import { io as connect, type Socket } from 'socket.io-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { MightyAction, MightyView, PlayerId, RoundScore } from './types.js';
+import type { PlayerId, RoundScore } from './types.js';
+import type { GameId } from './registry.js';
 
 const SERVER_URL = import.meta.env['VITE_SERVER_URL'] ?? 'http://localhost:3001';
 const TOKEN_KEY = 'mightichu.token';
@@ -35,8 +36,9 @@ export interface OnlineState {
   readonly room: RoomInfo | null;
   readonly seat: PlayerId | null;
   readonly seq: number;
-  readonly view: MightyView | null;
-  readonly legal: readonly MightyAction[];
+  readonly game: GameId;
+  readonly view: unknown;
+  readonly legal: readonly unknown[];
   readonly log: readonly string[];
   readonly score: RoundScore | null;
   readonly totals: Readonly<Record<string, number>>;
@@ -44,6 +46,7 @@ export interface OnlineState {
 }
 
 const EMPTY: OnlineState = {
+  game: 'mighty',
   connected: false,
   room: null,
   seat: null,
@@ -58,12 +61,12 @@ const EMPTY: OnlineState = {
 
 export interface OnlineApi {
   readonly state: OnlineState;
-  join(nickname: string, roomId?: string): void;
+  join(nickname: string, game: GameId, roomId?: string): void;
   addBot(): void;
   removeBot(seat: PlayerId): void;
   start(): void;
   nextRound(): void;
-  send(action: MightyAction): void;
+  send(action: unknown): void;
   leave(): void;
 }
 
@@ -91,6 +94,7 @@ export function useOnline(): OnlineApi {
         case 'ROOM':
           setState((s) => ({
             ...s,
+            game: message.room.game,
             room: message.room,
             // 로비로 돌아오면 이전 판 흔적을 지운다
             ...(message.room.started ? {} : { view: null, score: null, log: [] }),
@@ -100,11 +104,12 @@ export function useOnline(): OnlineApi {
           setState((s) => ({
             ...s,
             seq: message.seq,
-            view: message.view as MightyView,
-            legal: message.legal as readonly MightyAction[],
+            view: message.view,
+            legal: message.legal,
             log: message.log,
             error: null,
-            score: (message.view as MightyView).outcome === null ? null : s.score,
+            score:
+              (message.view as { outcome?: unknown } | null)?.outcome == null ? null : s.score,
           }));
           break;
         case 'SCORE':
@@ -131,12 +136,13 @@ export function useOnline(): OnlineApi {
   }, []);
 
   const join = useCallback(
-    (nickname: string, roomId?: string) => {
+    (nickname: string, game: GameId, roomId?: string) => {
       const token = readStorage(TOKEN_KEY);
+      setState((s) => ({ ...s, game }));
       emit({
         type: 'JOIN',
         nickname,
-        game: 'mighty',
+        game,
         ...(roomId === undefined ? {} : { roomId }),
         ...(token === null ? {} : { token }),
       } as ClientMessage);
@@ -152,9 +158,9 @@ export function useOnline(): OnlineApi {
     start: useCallback(() => emit({ type: 'START' }), [emit]),
     nextRound: useCallback(() => emit({ type: 'NEXT_ROUND' }), [emit]),
     send: useCallback(
-      (action: MightyAction) =>
+      (action: unknown) =>
         setState((s) => {
-          emit({ type: 'ACTION', seq: s.seq, action: action as unknown as Record<string, unknown> });
+          emit({ type: 'ACTION', seq: s.seq, action: action as Record<string, unknown> });
           return s;
         }),
       [emit],

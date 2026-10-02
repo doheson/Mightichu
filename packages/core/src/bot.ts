@@ -25,4 +25,16 @@ export interface Bot<View, Action> {
   /** 사람에게 보여줄 이름 (예: "초보 봇"). */
   readonly label: string;
   decide(ctx: BotContext<View, Action>): Action | Promise<Action>;
+
+  /**
+   * 지금 **꼭** 행동해야 하는가. 생략하면 true.
+   *
+   * `legalActions` 가 턴을 묻지 않는 설계의 대가다 — 티츄에서는
+   * "티츄 선언" 과 "아웃 오브 턴 폭탄" 이 거의 항상 합법이라,
+   * 드라이버가 "합법 수가 있으면 둔다" 로 돌면 봇이 티츄를 남발하고
+   * 사람 차례가 영영 오지 않는다.
+   *
+   * 선택적 액션만 있을 때 false 를 돌려주면 드라이버가 건너뛴다.
+   */
+  wants?(ctx: BotContext<View, Action>): boolean;
 }

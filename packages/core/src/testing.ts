@@ -89,7 +89,15 @@ export function playWithBots<State, Action, View, Config>(
       return { finalState: state, log, states, finished: true };
     }
 
-    const actor = players.find((p) => engine.legalActions(state, p).length > 0);
+    const actor = players.find((p) => {
+      const legal = engine.legalActions(state, p);
+      if (legal.length === 0) return false;
+      const bot = bots[p];
+      if (bot === undefined) return false;
+      return (
+        bot.wants?.({ me: p, view: engine.view(state, p), legal, rng }) ?? true
+      );
+    });
     if (actor === undefined) break;
 
     const bot = bots[actor];

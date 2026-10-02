@@ -44,6 +44,23 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
     id: 'tichu-basic',
     label: '기본 봇',
 
+    /**
+     * 선택적 액션만 있을 때는 두지 않는다.
+     *  - 티츄 선언: 이 수준의 봇에게는 ±100 도박이라 부르지 않는다
+     *  - 아웃 오브 턴 폭탄: 점수가 큰 트릭에서만 쓴다
+     * 이게 없으면 봇이 매 순간 티츄를 선언하고 사람 차례가 오지 않는다.
+     */
+    wants(ctx: BotContext<TichuView, TichuAction>): boolean {
+      const { view, legal } = ctx;
+      const meaningful = legal.filter((a) => a.type !== 'DECLARE_TICHU');
+      if (meaningful.length === 0) return false;
+      if (view.phase !== 'PLAY') return true;
+      if (view.turn === view.me) return true;
+      // 내 차례가 아니면 폭탄만 가능하다 — 큰 트릭에서만
+      const points = countPoints(view.currentTrick.flatMap((p) => p.combo.cards));
+      return points >= 15;
+    },
+
     decide(ctx: BotContext<TichuView, TichuAction>): TichuAction {
       const { view, legal } = ctx;
 
@@ -51,8 +68,12 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
       const passGrand = legal.find((a) => a.type === 'PASS_GRAND');
       if (passGrand !== undefined) return passGrand;
 
+      // 티츄 선언은 선택지에서 제외한다 (wants 가 이미 걸러주지만 방어적으로)
+      const options = legal.filter((a) => a.type !== 'DECLARE_TICHU');
+      if (options.length === 0) return legal[0] as TichuAction;
+
       // ── 교환: 상대에게는 가장 약한 카드, 파트너에게는 괜찮은 카드
-      const gives = legal.filter((a): a is Extract<TichuAction, { type: 'GIVE' }> => a.type === 'GIVE');
+      const gives = options.filter((a): a is Extract<TichuAction, { type: 'GIVE' }> => a.type === 'GIVE');
       if (gives.length > 0) {
         const partner = view.partner;
         const toPartner = gives.filter((a) => a.to === partner);
@@ -65,7 +86,7 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
       }
 
       // ── 용 양도: 점수를 덜 모은 상대에게
-      const gifts = legal.filter(
+      const gifts = options.filter(
         (a): a is Extract<TichuAction, { type: 'GIVE_DRAGON' }> => a.type === 'GIVE_DRAGON',
       );
       if (gifts.length > 0) {
@@ -75,8 +96,8 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
       }
 
       // ── 플레이
-      const plays = playsOf(legal);
-      const pass = legal.find((a) => a.type === 'PASS');
+      const plays = playsOf(options);
+      const pass = options.find((a) => a.type === 'PASS');
 
       if (plays.length > 0) {
         const leading = view.currentCombo === null && view.turn === view.me;
@@ -118,7 +139,7 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
 
       if (pass !== undefined) return pass;
 
-      const fallback = legal[0];
+      const fallback = options[0];
       if (fallback === undefined) throw new Error('합법 수가 없는데 봇이 호출되었다');
       return fallback;
     },

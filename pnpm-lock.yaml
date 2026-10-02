@@ -225,6 +225,9 @@ importers:
       '@mightichu/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
+      '@mightichu/tichu':
+        specifier: workspace:*
+        version: link:../../packages/tichu
       react:
         specifier: ^19.0.0
         version: 19.3.0

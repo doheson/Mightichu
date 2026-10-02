@@ -209,9 +209,19 @@ export class Room {
     const engine = this.entry.engine;
     if (this.state === null || engine.isOver(this.state as never)) return null;
 
-    const bot = this.members.find(
-      (m) => m.isBot && engine.legalActions(this.state as never, m.seat).length > 0,
-    );
+    const bot = this.members.find((m) => {
+      if (!m.isBot) return false;
+      const legal = engine.legalActions(this.state as never, m.seat);
+      if (legal.length === 0) return false;
+      return (
+        this.entry.bot.wants?.({
+          me: m.seat,
+          view: engine.view(this.state as never, m.seat),
+          legal,
+          rng: this.rng,
+        }) ?? true
+      );
+    });
     if (bot === undefined) return null;
 
     const decided = this.entry.bot.decide({
