@@ -197,6 +197,9 @@ importers:
       '@mightichu/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
+      '@mightichu/tichu':
+        specifier: workspace:*
+        version: link:../../packages/tichu
       socket.io:
         specifier: ^4.8.0
         version: 4.8.4
@@ -253,6 +256,9 @@ importers:
       '@mightichu/mighty':
         specifier: workspace:*
         version: link:../mighty
+      '@mightichu/tichu':
+        specifier: workspace:*
+        version: link:../tichu
 
   packages/core: {}
 
@@ -270,6 +276,12 @@ importers:
       zod:
         specifier: ^4.0.0
         version: 4.6.5
+
+  packages/tichu:
+    dependencies:
+      '@mightichu/core':
+        specifier: workspace:*
+        version: link:../core
 
 packages:
 

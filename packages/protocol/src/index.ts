@@ -13,7 +13,7 @@ import { z } from 'zod';
 
 export const PROTOCOL_VERSION = 1;
 
-export const GameIdSchema = z.enum(['mighty']);
+export const GameIdSchema = z.enum(['mighty', 'tichu']);
 export type GameId = z.infer<typeof GameIdSchema>;
 
 export const NicknameSchema = z.string().trim().min(1).max(12);

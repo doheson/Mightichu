@@ -212,3 +212,41 @@ describe('방 레지스트리', () => {
     expect(registry.sweep()).toBe(0);
   });
 });
+
+describe('티츄 — 서버는 게임을 모른다', () => {
+  it('같은 Room 코드가 4인 티츄를 그대로 돌린다', () => {
+    const room = new Room('TICHU', 'tichu');
+    for (let i = 0; i < 4; i++) room.addBot();
+    room.hostSeat = 'p1';
+    expect(room.members).toHaveLength(4);
+    expect(room.start(21)).toBeNull();
+    room.drainBots();
+    expect(room.isOver()).toBe(true);
+  });
+
+  it('티츄 점수는 팀 단위이고 좌석 수는 4다', () => {
+    const room = new Room('TICHU2', 'tichu');
+    for (let i = 0; i < 4; i++) room.addBot();
+    room.hostSeat = 'p1';
+    room.start(77);
+    room.drainBots();
+    expect(room.totals['p1']).toBe(room.totals['p3']);
+    expect(room.totals['p2']).toBe(room.totals['p4']);
+    expect(Object.keys(room.totals)).toHaveLength(4);
+  });
+
+  it('5명째는 들어올 수 없다', () => {
+    const room = new Room('TICHU3', 'tichu');
+    for (let i = 0; i < 4; i++) room.addBot();
+    expect(room.join('늦은사람', 't', 's')).toMatchObject({ code: 'ROOM_FULL' });
+  });
+
+  it('뷰가 좌석마다 다르고 남의 손패가 없다', () => {
+    const room = new Room('TICHU4', 'tichu');
+    for (let i = 0; i < 4; i++) room.addBot();
+    room.hostSeat = 'p1';
+    room.start(5);
+    const views = room.members.map((m) => JSON.stringify(room.viewFor(m.seat)));
+    expect(new Set(views).size).toBe(4);
+  });
+});

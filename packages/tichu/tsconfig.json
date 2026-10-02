@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": ".", "outDir": "dist" },
   "include": ["src/**/*.ts", "test/**/*.ts"],
-  "references": [{ "path": "../core" }, { "path": "../mighty" }, { "path": "../tichu" }]
+  "references": [{ "path": "../core" }]
 }

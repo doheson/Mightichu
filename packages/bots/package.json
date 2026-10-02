@@ -5,10 +5,14 @@
   "type": "module",
   "description": "AI 봇 — 리댁션된 View 만 입력받아 구조적으로 치팅이 불가능하다",
   "exports": {
-    ".": { "types": "./src/index.ts", "default": "./src/index.ts" }
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
   },
   "dependencies": {
     "@mightichu/core": "workspace:*",
-    "@mightichu/mighty": "workspace:*"
+    "@mightichu/mighty": "workspace:*",
+    "@mightichu/tichu": "workspace:*"
   }
 }

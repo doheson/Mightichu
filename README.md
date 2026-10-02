@@ -13,7 +13,8 @@
 
 ## 현재 상태
 
-**3단계 완료** — AI 대전과 온라인 멀티플레이 모두 동작한다. 테스트 241개 통과.
+**4단계 진행 중** — 티츄 룰 엔진 완성. 테스트 309개 통과.
+마이티는 AI·온라인 양 모드로 플레이 가능하고, 티츄는 엔진과 서버 연결까지 끝났다(UI 남음).
 
 ```bash
 pnpm --filter @mightichu/web dev        # http://localhost:5173
@@ -24,7 +25,7 @@ pnpm --filter @mightichu/server dev     # http://localhost:3001  (온라인 모�
 |---|---|
 | `packages/core` | ✅ 계약, 결정론 RNG, 좌석/방향, 리플레이, JSON 검사 |
 | `packages/mighty` | ✅ 룰 엔진 전체 (비딜·비딩·바닥·프렌드·10트릭·점수) |
-| `packages/tichu` | ⬜ 4단계 |
+| `packages/tichu` | ✅ 룰 엔진 전체 (조합·봉황 와일드·폭탄·소원·용 양도·더블윈) |
 | `packages/bots` | ✅ L1 랜덤 + L1.5 기본 봇 (제대로 된 L2 는 5단계) |
 | `apps/web` | ✅ AI 모드(Web Worker) + 온라인 모드(Socket.IO) |
 | `packages/protocol` | ✅ zod 스키마 — 서버·클라 공용 |

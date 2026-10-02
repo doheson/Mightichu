@@ -5,9 +5,10 @@
  * 티츄(4단계)를 넣을 때 서버 코드는 이 파일의 한 줄 외에 바뀌지 않는다.
  */
 
-import { createMightyBasicBot } from '@mightichu/bots';
+import { createMightyBasicBot, createTichuBasicBot } from '@mightichu/bots';
 import type { Bot, GameEngine } from '@mightichu/core';
 import { mightyEngine } from '@mightichu/mighty';
+import { tichuEngine } from '@mightichu/tichu';
 import type { GameId } from '@mightichu/protocol';
 
 export interface GameEntry {
@@ -23,6 +24,12 @@ const registry: Record<GameId, GameEntry> = {
     bot: createMightyBasicBot() as unknown as GameEntry['bot'],
     players: mightyEngine.maxPlayers,
     label: '마이티',
+  },
+  tichu: {
+    engine: tichuEngine as unknown as GameEntry['engine'],
+    bot: createTichuBasicBot() as unknown as GameEntry['bot'],
+    players: tichuEngine.maxPlayers,
+    label: '티츄',
   },
 };
 

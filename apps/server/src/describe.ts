@@ -1,9 +1,68 @@
-/** 게임 이벤트를 사람이 읽는 한 줄로. 비공개 이벤트는 걸러낸다. */
+/**
+ * 게임 이벤트를 사람이 읽는 한 줄로. 비공개 이벤트는 걸러낸다.
+ *
+ * `TRICK_WON` 처럼 이름이 겹치지만 payload 가 다른 이벤트가 있어 게임별로 나눈다.
+ */
 
 import type { GameEvent, PlayerId } from '@mightichu/core';
 import { bidLabel, cardLabel } from '@mightichu/mighty';
+import type { GameId } from '@mightichu/protocol';
 
 export function describeEvent(
+  event: GameEvent,
+  nameOf: (seat: PlayerId) => string,
+  game: GameId = 'mighty',
+): string | null {
+  if (game === 'tichu') return describeTichu(event, nameOf);
+  return describeMighty(event, nameOf);
+}
+
+const COMBO_LABEL: Record<string, string> = {
+  SINGLE: '싱글',
+  PAIR: '페어',
+  TRIPLE: '트리플',
+  FULL_HOUSE: '풀하우스',
+  STAIRS: '계단',
+  STRAIGHT: '스트레이트',
+  BOMB_FOUR: '폭탄(포카드)',
+  BOMB_STRAIGHT: '폭탄(스트레이트 플러시)',
+  DOG: '개',
+};
+
+function describeTichu(event: GameEvent, nameOf: (seat: PlayerId) => string): string | null {
+  if (event.visibleTo !== undefined) return null;
+  const p = (event.payload ?? {}) as Record<string, unknown>;
+  const who = typeof p['player'] === 'string' ? nameOf(p['player']) : '';
+
+  switch (event.type) {
+    case 'TICHU_CALLED':
+      return `${who}: ${p['call'] === 'GRAND' ? '라지 티츄!' : '티츄!'}`;
+    case 'PLAYED': {
+      const combo = COMBO_LABEL[String(p['combo'])] ?? String(p['combo']);
+      return `${who} → ${combo} ${String(p['cards'])}장`;
+    }
+    case 'PASS':
+      return `${who}: 패스`;
+    case 'DOG_PLAYED':
+      return `${who} 가 개를 내 ${nameOf(p['to'] as string)} 에게 리드를 넘겼습니다.`;
+    case 'WISH_MADE':
+      return `${who} 가 소원을 걸었습니다: ${String(p['wish'])}`;
+    case 'WISH_FULFILLED':
+      return `${who} 가 소원(${String(p['wish'])})을 이행했습니다.`;
+    case 'TRICK_WON':
+      return `${nameOf(p['winner'] as string)} 트릭 획득 (${String(p['points'])}점)`;
+    case 'DRAGON_TRICK':
+      return `${nameOf(p['winner'] as string)} 가 용으로 먹었습니다 — 상대에게 넘겨야 합니다.`;
+    case 'DRAGON_GIVEN':
+      return `${nameOf(p['from'] as string)} → ${nameOf(p['to'] as string)} 에게 용 트릭을 넘겼습니다.`;
+    case 'FINISHED':
+      return `${who} 손패 비움 (${String(p['place'])}등)`;
+    default:
+      return null;
+  }
+}
+
+function describeMighty(
   event: GameEvent,
   nameOf: (seat: PlayerId) => string,
 ): string | null {

@@ -1,0 +1,9 @@
+{
+  "name": "@mightichu/tichu",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "티츄(4인 2:2) 룰 엔진 — 순수 함수, 런타임 의존성은 @mightichu/core 뿐",
+  "exports": { ".": { "types": "./src/index.ts", "default": "./src/index.ts" } },
+  "dependencies": { "@mightichu/core": "workspace:*" }
+}

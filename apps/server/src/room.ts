@@ -32,6 +32,7 @@ export interface Member {
 
 export type RoomError = { readonly code: string; readonly message: string };
 
+/** 좌석 이름. 필요한 수는 게임마다 다르다(마이티 5인, 티츄 4인). */
 const SEATS: readonly PlayerId[] = ['p1', 'p2', 'p3', 'p4', 'p5'];
 
 export class Room {
@@ -265,7 +266,7 @@ export class Room {
 
   private record(events: readonly GameEvent[]): void {
     for (const event of events) {
-      const line = describeEvent(event, (seat) => this.nameOf(seat));
+      const line = describeEvent(event, (seat) => this.nameOf(seat), this.game);
       if (line !== null) this.log.push(line);
     }
   }
