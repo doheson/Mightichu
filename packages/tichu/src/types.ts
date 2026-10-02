@@ -62,6 +62,8 @@ export type TichuState = {
   /** 마지막으로 조합을 낸 사람 — 트릭 종료 판정 기준. */
   readonly lastPlayer: PlayerId | null;
   readonly passStreak: number;
+  /** 이번 트릭에 패스한 사람. 트릭이 닫히거나 누가 내면 초기화된다. */
+  readonly passedThisTrick: readonly PlayerId[];
   /** 참새 소원. 누군가 이행할 때까지 유지된다. */
   readonly wish: number | null;
 
@@ -125,6 +127,8 @@ export type TichuView = {
   readonly currentTrick: readonly Play[];
   readonly currentCombo: Combo | null;
   readonly passStreak: number;
+  /** 이번 트릭에 패스한 사람 — 전원 공개. */
+  readonly passedThisTrick: readonly PlayerId[];
   readonly wish: number | null;
 
   readonly takenCounts: Readonly<Record<PlayerId, number>>;

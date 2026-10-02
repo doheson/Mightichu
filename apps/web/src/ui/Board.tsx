@@ -40,7 +40,10 @@ export function Board({
       <Header view={view} />
       {error !== null ? <div className="error">{error}</div> : null}
 
-      <Seats view={view} />
+      <div className="board">
+        <Seats view={view} />
+        <Log lines={log} />
+      </div>
 
       <section className="main">
         <div className="main__left">
@@ -50,7 +53,6 @@ export function Board({
             <Panel view={view} legal={legal} send={send} />
           )}
         </div>
-        <Log lines={log} />
       </section>
 
       {view.phase !== 'KITTY' && view.phase !== 'PLAY' && view.phase !== 'DONE' ? (

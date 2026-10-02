@@ -141,6 +141,7 @@ function deal(config: TichuConfig, players: readonly PlayerId[], seed: number): 
     currentCombo: null,
     lastPlayer: null,
     passStreak: 0,
+    passedThisTrick: [],
     wish: null,
     taken,
     discarded: [],
@@ -234,6 +235,7 @@ function closeTrick(state: TichuState): { state: TichuState; events: GameEvent[]
         currentCombo: null,
         lastPlayer: null,
         passStreak: 0,
+        passedThisTrick: [],
       },
       events: [{ type: 'DRAGON_TRICK', payload: { winner } }],
     };
@@ -269,6 +271,7 @@ function startNextTrick(state: TichuState, winner: PlayerId): TichuState {
     currentCombo: null,
     lastPlayer: null,
     passStreak: 0,
+    passedThisTrick: [],
     leader,
     turn: leader,
   };
@@ -553,6 +556,7 @@ function applyAction(
           currentCombo: null,
           lastPlayer: null,
           passStreak: 0,
+          passedThisTrick: [],
           leader: target,
           turn: target,
         };
@@ -567,6 +571,7 @@ function applyAction(
         currentCombo: combo,
         lastPlayer: player,
         passStreak: 0,
+        passedThisTrick: [],
       };
 
       // 참새 소원
@@ -599,7 +604,11 @@ function applyAction(
       if (state.turn !== player) return err('NOT_YOUR_TURN', '차례가 아님');
       if (isLeading(state)) return err('CANNOT_PASS', '리드는 패스할 수 없음');
 
-      let next: TichuState = { ...state, passStreak: state.passStreak + 1 };
+      let next: TichuState = {
+        ...state,
+        passStreak: state.passStreak + 1,
+        passedThisTrick: [...state.passedThisTrick, player],
+      };
       if (shouldCloseTrick(next)) {
         const closed = closeTrick(next);
         return ok({ state: settleIfOver(closed.state), events: closed.events });
@@ -673,6 +682,7 @@ function buildView(state: TichuState, viewer: PlayerId): TichuView {
     currentTrick: state.currentTrick,
     currentCombo: state.currentCombo,
     passStreak: state.passStreak,
+    passedThisTrick: state.passedThisTrick,
     wish: state.wish,
     takenCounts,
     takenPoints,

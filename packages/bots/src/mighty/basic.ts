@@ -184,13 +184,30 @@ export function createMightyBasicBot(): Bot<MightyView, MightyAction> {
           })[0] as MightyAction;
         }
 
+        /**
+         * **팀 패는 밟지 않는다.** 마이티는 프렌드가 숨어 있어 아는 범위가 좁다 —
+         * 내가 주공이고 프렌드가 공개됐거나, 내가 프렌드이고 주공이 이기고 있을 때만 안다.
+         */
+        const lead = view.currentTrick[0];
+        const bestSoFar = view.currentTrick.reduce<{ player: string; s: number } | null>(
+          (best, play) => {
+            const s = cardStrength(play.card, tctx);
+            return best === null || s > best.s ? { player: play.player, s } : best;
+          },
+          null,
+        );
+        const knownAlly =
+          view.declarer === view.me ? view.friend : view.iAmFriend ? view.declarer : null;
+        const allyWinning =
+          lead !== undefined && knownAlly !== null && bestSoFar?.player === knownAlly;
+
         const winners = plays.filter((a) => {
           const card = a.type === 'PLAY_CARD' ? a.card : '';
           return cardStrength(card, tctx) > threshold;
         });
 
-        // 점수카드가 걸린 트릭이면 가장 싼 승리 카드로 먹는다
-        if (trickHasPoints && winners.length > 0) {
+        // 점수카드가 걸린 트릭이면 가장 싼 승리 카드로 먹는다 (아군이 이기고 있으면 놔둔다)
+        if (trickHasPoints && winners.length > 0 && !allyWinning) {
           return [...winners].sort((a, b) => {
             const ca = a.type === 'PLAY_CARD' ? a.card : '';
             const cb = b.type === 'PLAY_CARD' ? b.card : '';

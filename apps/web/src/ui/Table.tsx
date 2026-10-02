@@ -68,7 +68,7 @@ function phaseLabel(phase: MightyView['phase']): string {
  */
 const START_ANGLE = 90;
 const RADIUS_X = 37;
-const RADIUS_Y = 33;
+const RADIUS_Y = 31;
 
 function polar(index: number, count: number, scale: number): React.CSSProperties {
   const angle = ((START_ANGLE + (360 / count) * index) * Math.PI) / 180;
@@ -149,7 +149,7 @@ export function Seats({ view }: { readonly view: MightyView }): React.JSX.Elemen
                 <span className="seat__points">{view.points[seat] ?? 0}점</span>
               </div>
               {view.passed.includes(seat) && view.phase === 'BIDDING' ? (
-                <div className="seat__tag">패스</div>
+                <div className="seat__tag seat__tag--pass">패스</div>
               ) : null}
               {isWinner ? (
                 <div className="seat__tag seat__tag--won">
@@ -181,11 +181,21 @@ function nextToPlay(view: MightyView): PlayerId | null {
   return view.seats[(index + 1) % view.seats.length] ?? null;
 }
 
-export function Log({ lines }: { readonly lines: readonly string[] }): React.JSX.Element {
-  const recent = lines.slice(-40);
+/**
+ * 진행 로그 — 게임판 **우측 상단**에 겹쳐 띄운다.
+ * 최근 몇 줄만 보여준다. 전체를 늘어놓으면 판을 가린다.
+ */
+export function Log({
+  lines,
+  limit = 4,
+}: {
+  readonly lines: readonly string[];
+  readonly limit?: number;
+}): React.JSX.Element | null {
+  const recent = lines.slice(-limit);
+  if (recent.length === 0) return null;
   return (
-    <div className="log">
-      <div className="log__title">진행</div>
+    <div className="log log--overlay">
       <ol className="log__list">
         {recent.map((line, i) => (
           <li key={`${i}-${line}`}>{line}</li>

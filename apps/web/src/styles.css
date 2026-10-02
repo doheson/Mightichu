@@ -477,3 +477,59 @@ body {
 }
 .received__item { display: flex; align-items: center; gap: 5px; }
 .received__from { font-size: 12px; color: var(--text-dim); }
+
+/* ── 게임판: 로그를 우측 상단에 겹쳐 띄운다 */
+.board { position: relative; }
+
+.log--overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: min(40%, 200px);
+  max-height: none;
+  padding: 5px 7px;
+  /* 좌석보다 뒤에 깔린다 — 좁은 화면에서 겹쳐도 좌석이 가려지지 않는다 */
+  z-index: 0;
+  background: color-mix(in srgb, #000 55%, transparent);
+  border: 1px solid color-mix(in srgb, #fff 12%, transparent);
+  border-radius: 8px;
+  color: #e8eaee;
+  pointer-events: none;
+  overflow: hidden;
+}
+.log--overlay .log__list {
+  margin: 0; padding: 0; list-style: none;
+  font-size: 11px; line-height: 1.35;
+}
+.log--overlay .log__list li {
+  margin: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0.6;
+}
+.log--overlay .log__list li:last-child { opacity: 1; font-weight: 600; }
+
+@media (max-width: 680px) {
+  .log--overlay { width: min(46%, 180px); }
+  .log--overlay .log__list { font-size: 10px; }
+}
+
+/* 패스는 빨간색으로 */
+.seat__tag--pass {
+  background: #c7372f;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 게임판을 더 길게 */
+.table { aspect-ratio: 16 / 12; max-height: 560px; min-height: 340px; }
+.table--tichu { aspect-ratio: 16 / 12; }
+@media (max-width: 680px) {
+  .table, .table--tichu { aspect-ratio: 4 / 5; max-height: 460px; }
+}
+
+/* 로그가 사라졌으니 본문은 한 줄로 */
+.main { grid-template-columns: 1fr; }
+
+/* 좌석과 낸 카드는 로그 위로 */
+.seat, .trickslot { z-index: 2; }
+.table__center { z-index: 1; }

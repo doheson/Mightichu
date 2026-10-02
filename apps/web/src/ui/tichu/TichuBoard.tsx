@@ -64,7 +64,10 @@ export function TichuBoard({
 
       {error !== null ? <div className="error">{error}</div> : null}
 
-      <TichuTable view={view} />
+      <div className="board">
+        <TichuTable view={view} />
+        <Log lines={log} />
+      </div>
 
       <section className="main">
         <div className="main__left">
@@ -80,7 +83,6 @@ export function TichuBoard({
             <PlayPanel view={view} legal={legal} send={send} />
           )}
         </div>
-        <Log lines={log} />
       </section>
     </>
   );

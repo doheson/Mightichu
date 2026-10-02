@@ -90,3 +90,55 @@ describe('구조적 치팅 불가', () => {
     expect(Object.keys(seen as object).sort()).toEqual(['legal', 'me', 'rng', 'view']);
   });
 });
+
+describe('팀 패를 밟지 않는다', () => {
+  it('티츄: 파트너가 이기고 있으면 넘긴다', async () => {
+    const { tichuEngine } = await import('@mightichu/tichu');
+    const { createTichuBasicBot } = await import('../src/tichu/basic.js');
+    const { createRng } = await import('@mightichu/core');
+
+    const bot = createTichuBasicBot();
+    const rng = createRng(1);
+    const P = ['p1', 'p2', 'p3', 'p4'];
+    const bots: Record<string, typeof bot> = {};
+    for (const p of P) bots[p] = bot;
+
+    let overtookPartner = 0;
+    let chances = 0;
+
+    for (let seed = 0; seed < 200; seed++) {
+      let state = tichuEngine.init({ config: {}, players: P, seed });
+      for (let step = 0; step < 600 && !tichuEngine.isOver(state); step++) {
+        const actor = P.find((p) => {
+          const legal = tichuEngine.legalActions(state, p);
+          if (legal.length === 0) return false;
+          return bot.wants?.({ me: p, view: tichuEngine.view(state, p), legal, rng }) ?? true;
+        });
+        if (actor === undefined) break;
+
+        const view = tichuEngine.view(state, actor);
+        const last = view.currentTrick[view.currentTrick.length - 1];
+        const partnerWinning = last !== undefined && last.player === view.partner;
+
+        const decided = bot.decide({
+          me: actor,
+          view,
+          legal: tichuEngine.legalActions(state, actor),
+          rng,
+        }) as { type: string };
+
+        if (partnerWinning && view.turn === actor && view.phase === 'PLAY') {
+          chances++;
+          if (decided.type === 'PLAY') overtookPartner++;
+        }
+
+        const r = tichuEngine.apply(state, actor, decided as never);
+        if (!r.ok) break;
+        state = r.value.state;
+      }
+    }
+
+    expect(chances).toBeGreaterThan(0);
+    expect(overtookPartner).toBe(0);
+  });
+});

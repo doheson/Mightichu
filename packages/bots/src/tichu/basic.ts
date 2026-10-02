@@ -39,6 +39,15 @@ function playsOf(actions: readonly TichuAction[]): Extract<TichuAction, { type: 
   return actions.filter((a): a is Extract<TichuAction, { type: 'PLAY' }> => a.type === 'PLAY');
 }
 
+/**
+ * 지금 트릭을 이기고 있는 사람. 빈 트릭이면 null.
+ * 마지막으로 낸 사람이 곧 현재 승자다 — 뒤에 냈다는 건 앞을 이겼다는 뜻이므로.
+ */
+function currentWinner(view: TichuView): string | null {
+  const last = view.currentTrick[view.currentTrick.length - 1];
+  return last?.player ?? null;
+}
+
 export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
   return {
     id: 'tichu-basic',
@@ -56,7 +65,8 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
       if (meaningful.length === 0) return false;
       if (view.phase !== 'PLAY') return true;
       if (view.turn === view.me) return true;
-      // 내 차례가 아니면 폭탄만 가능하다 — 큰 트릭에서만
+      // 내 차례가 아니면 폭탄만 가능하다 — 큰 트릭에서만, 그리고 **파트너가 이기고 있으면 안 쓴다**
+      if (view.partner !== null && currentWinner(view) === view.partner) return false;
       const points = countPoints(view.currentTrick.flatMap((p) => p.combo.cards));
       return points >= 15;
     },
@@ -104,6 +114,9 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
         const trickPoints = countPoints(
           view.currentTrick.flatMap((p) => p.combo.cards),
         );
+        // **팀 패는 밟지 않는다.** 파트너가 이기고 있으면 그 점수는 우리 팀 것이다.
+        const partnerWinning =
+          view.partner !== null && currentWinner(view) === view.partner;
 
         // 소원 지정은 하지 않는다(파트너의 폭탄을 깨뜨릴 수 있다)
         const simple = plays.filter((a) => a.wish === undefined);
@@ -124,6 +137,9 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
             return comboCost(a.cards) - comboCost(b.cards);
           })[0] as TichuAction;
         }
+
+        // 파트너가 이기고 있으면 넘긴다 — 우리 팀 점수를 내가 뺏을 이유가 없다
+        if (partnerWinning && pass !== undefined) return pass;
 
         // 따라가기: 점수가 없는 트릭이면 아끼고 패스
         if (trickPoints <= 0 && pass !== undefined && usable.length > 0) {

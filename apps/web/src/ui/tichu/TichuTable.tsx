@@ -11,7 +11,7 @@ import { TichuCard } from './TichuCard.js';
  */
 const START_ANGLE = 90;
 const RADIUS_X = 37;
-const RADIUS_Y = 33;
+const RADIUS_Y = 31;
 
 function polar(index: number, count: number, scale: number): React.CSSProperties {
   const angle = ((START_ANGLE - (360 / count) * index) * Math.PI) / 180;
@@ -111,6 +111,9 @@ export function TichuTable({ view }: { readonly view: TichuView }): React.JSX.El
                 <div className={`seat__tag seat__tag--${call === 'GRAND' ? 'grand' : 'tichu'}`}>
                   {CALL_LABEL[call]}
                 </div>
+              ) : null}
+              {view.passedThisTrick.includes(seat) && !isWinner ? (
+                <div className="seat__tag seat__tag--pass">패스</div>
               ) : null}
               {isWinner ? <div className="seat__tag seat__tag--won">획득 {wonPoints}</div> : null}
             </div>
