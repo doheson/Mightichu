@@ -65,39 +65,88 @@ function phaseLabel(phase: MightyView['phase']): string {
   }
 }
 
+/**
+ * 원형 테이블.
+ *
+ * **나는 항상 하단 중앙**이고 거기서 **시계방향**으로 앉는다 — 마이티의 진행 방향과 일치시킨다.
+ * 좌석 배열(`view.seats`)이 이미 시계방향이므로, 나를 맨 앞으로 회전시키기만 하면 된다.
+ *
+ * 화면 좌표는 y 가 아래로 향하므로 각도가 커질수록 시계방향이다.
+ * 하단 중앙 = 90°, 5등분이니 72° 간격 → 90, 162, 234, 306, 18.
+ * 시계 눈금으로 6시 → 7시 → 10시 → 2시 → 4시 순이 된다.
+ */
+const START_ANGLE = 90;
+const RADIUS_X = 37;
+const RADIUS_Y = 33;
+
+function polar(index: number, count: number, scale: number): React.CSSProperties {
+  const angle = ((START_ANGLE + (360 / count) * index) * Math.PI) / 180;
+  return {
+    left: `${50 + RADIUS_X * scale * Math.cos(angle)}%`,
+    top: `${50 + RADIUS_Y * scale * Math.sin(angle)}%`,
+  };
+}
+
+/** 나를 맨 앞으로 회전시킨 좌석 순서. 시계방향은 그대로 유지된다. */
+function orderedFromMe(seats: readonly PlayerId[], me: PlayerId): readonly PlayerId[] {
+  const start = seats.indexOf(me);
+  if (start < 0) return seats;
+  return seats.map((_, k) => seats[(start + k) % seats.length] as PlayerId);
+}
+
 export function Seats({ view }: { readonly view: MightyView }): React.JSX.Element {
   const played = new Map(view.currentTrick.map((t) => [t.player, t.card]));
+  const ordered = orderedFromMe(view.seats, view.me);
+  const turn = nextToPlay(view);
+
   return (
-    <div className="seats">
-      {view.seats.map((seat) => {
+    <div className="table">
+      <div className="table__center">
+        {view.phase === 'PLAY' ? (
+          <>
+            <span className="table__trickno">{view.trickNo + 1} / 10</span>
+            <span className="table__hint">트릭</span>
+          </>
+        ) : (
+          <span className="table__hint">{view.seats.length}인</span>
+        )}
+      </div>
+
+      {ordered.map((seat, index) => {
         const card = played.get(seat);
         const isTurn =
           (view.phase === 'BIDDING' && view.currentBidder === seat) ||
-          (view.phase === 'PLAY' && nextToPlay(view) === seat);
+          (view.phase === 'PLAY' && turn === seat);
         return (
-          <div
-            key={seat}
-            className={`seat ${seat === view.me ? 'seat--me' : ''} ${isTurn ? 'seat--turn' : ''}`}
-          >
-            <div className="seat__name">
-              {seatName(seat)}
-              {view.declarer === seat ? ' 👑' : ''}
-              {view.friend === seat ? ' 🤝' : ''}
+          <div key={`seat-${seat}`}>
+            <div
+              className={[
+                'seat',
+                seat === view.me ? 'seat--me' : '',
+                isTurn ? 'seat--turn' : '',
+                view.passed.includes(seat) && view.phase === 'BIDDING' ? 'seat--passed' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              style={polar(index, ordered.length, 1)}
+            >
+              <div className="seat__name">
+                {seatName(seat)}
+                {view.declarer === seat ? ' 👑' : ''}
+                {view.friend === seat ? ' 🤝' : ''}
+              </div>
+              <div className="seat__meta">
+                <CardBack count={view.handCounts[seat] ?? 0} />
+                <span className="seat__points">{view.points[seat] ?? 0}점</span>
+              </div>
+              {view.passed.includes(seat) && view.phase === 'BIDDING' ? (
+                <div className="seat__tag">패스</div>
+              ) : null}
             </div>
-            <div className="seat__meta">
-              <CardBack count={view.handCounts[seat] ?? 0} />
-              <span className="seat__points">{view.points[seat] ?? 0}점</span>
+
+            <div className="trickslot" style={polar(index, ordered.length, 0.44)}>
+              {card === undefined ? null : <CardView card={card} small disabled />}
             </div>
-            <div className="seat__card">
-              {card === undefined ? (
-                <span className="seat__empty">—</span>
-              ) : (
-                <CardView card={card} small disabled />
-              )}
-            </div>
-            {view.passed.includes(seat) && view.phase === 'BIDDING' ? (
-              <div className="seat__tag">패스</div>
-            ) : null}
           </div>
         );
       })}
