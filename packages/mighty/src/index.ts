@@ -44,6 +44,7 @@ export {
   canCallJoker,
   cardStrength,
   isJokerEffective,
+  isJokerRestrictedTrick,
   legalPlays,
   resolveLeadSuit,
   trickWinner,

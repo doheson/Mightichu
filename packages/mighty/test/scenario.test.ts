@@ -369,6 +369,61 @@ describe('조커콜 강제 — 실제 플레이 상태에서', () => {
     expect(cards.sort()).toEqual([JOKER, mighty].sort());
   });
 
+  it('첫 트릭에는 조커를 낼 수 없다 (확정 룰)', () => {
+    const state = playState(
+      {
+        p1: [makeCard('S', 5), makeCard('D', 4)],
+        p2: [JOKER, makeCard('S', 9)],
+        p3: [makeCard('S', 7), makeCard('C', 6)],
+        p4: [makeCard('S', 8), makeCard('C', 7)],
+        p5: [makeCard('S', 10), makeCard('C', 8)],
+      },
+      0,
+    );
+    const led = drive(state, [['p1', { type: 'PLAY_CARD', card: makeCard('S', 5) }]]);
+    const cards = mightyEngine
+      .legalActions(led, 'p2')
+      .map((a) => (a.type === 'PLAY_CARD' ? a.card : ''));
+    expect(cards).not.toContain(JOKER);
+    expect(cards).toContain(makeCard('S', 9));
+
+    const rejected = mightyEngine.apply(led, 'p2', { type: 'PLAY_CARD', card: JOKER });
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) expect(rejected.error.code).toBe('ILLEGAL_PLAY');
+  });
+
+  it('마지막 트릭에는 조커를 낼 수 있고 무늬 지정도 필요 없다', () => {
+    const state = playState(
+      {
+        p1: [JOKER],
+        p2: [makeCard('S', 9)],
+        p3: [makeCard('S', 7)],
+        p4: [makeCard('S', 8)],
+        p5: [makeCard('H', 10)], // 기루다 + 점수카드 — 승자 확인을 점수로 한다
+      },
+      9,
+    );
+    const cards = mightyEngine
+      .legalActions(state, 'p1')
+      .map((a) => (a.type === 'PLAY_CARD' ? a.card : ''));
+    expect(cards).toEqual([JOKER]);
+
+    // 무늬 지정 없이도 통과한다 (효력 없는 조커라 지정이 무의미)
+    const led = drive(state, [['p1', { type: 'PLAY_CARD', card: JOKER }]]);
+    expect(led.jokerNomination).toBeNull();
+
+    // 효력이 없으므로 기루다(하트)를 쥔 p5 가 트릭을 먹는다
+    const done = drive(led, [
+      ['p2', { type: 'PLAY_CARD', card: makeCard('S', 9) }],
+      ['p3', { type: 'PLAY_CARD', card: makeCard('S', 7) }],
+      ['p4', { type: 'PLAY_CARD', card: makeCard('S', 8) }],
+      ['p5', { type: 'PLAY_CARD', card: makeCard('H', 10) }],
+    ]);
+    // 조커가 효력이 없으므로 유일한 기루다를 낸 p5 가 먹는다 (H10 = 점수카드 1장)
+    expect(done.points['p5']).toBe(1);
+    expect(done.points['p1']).toBe(0);
+  });
+
   it('첫 트릭에서는 조커콜을 할 수 없다', () => {
     const jokerCall = makeCard('C', 3);
     const state = playState(

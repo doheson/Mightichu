@@ -49,6 +49,7 @@ import {
   LAST_TRICK,
   TRICKS_PER_ROUND,
   canCallJoker,
+  isJokerEffective,
   legalPlays,
   resolveLeadSuit,
   trickWinner,
@@ -277,6 +278,12 @@ function legalPlay(state: MightyState, player: PlayerId): MightyAction[] {
   for (const card of legalPlays(handOf(state, player), playCtx)) {
     if (isLeading && isJoker(card)) {
       // 조커 리드는 팔로우 무늬를 지정해야 한다.
+      // 단 마지막 트릭에 조커만 남아 강제로 리드하는 경우는 지정이 무의미하다
+      // (전원 손패 1장이라 선택지가 없다).
+      if (!isJokerEffective(ctx)) {
+        actions.push({ type: 'PLAY_CARD', card });
+        continue;
+      }
       for (const suit of SUITS) actions.push({ type: 'PLAY_CARD', card, nominate: suit });
       continue;
     }
@@ -522,7 +529,12 @@ function applyAction(
         return err('ILLEGAL_PLAY', `${cardLabel(action.card)} 는 지금 낼 수 없음`);
       }
 
-      if (isLeading && isJoker(action.card) && action.nominate === undefined) {
+      if (
+        isLeading &&
+        isJoker(action.card) &&
+        isJokerEffective(ctx) &&
+        action.nominate === undefined
+      ) {
         return err('NOMINATION_REQUIRED', '조커를 리드할 때는 무늬를 지정해야 함');
       }
       if (

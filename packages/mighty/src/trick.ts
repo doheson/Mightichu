@@ -38,6 +38,19 @@ export function isJokerEffective(ctx: TrickContext): boolean {
 }
 
 /**
+ * 조커를 **낼 수 없는** 트릭인가.
+ *
+ * 확정 룰: **첫 트릭에만** 조커를 낼 수 없다 (리드도 팔로우도).
+ *
+ * 마지막 트릭은 제한하지 않는다 — 그 시점엔 전원 손패가 1장이므로
+ * "못 낸다" 와 "효력 없다" 가 결과적으로 같아진다(조커가 유일한 카드면 어차피 내게 된다).
+ * 마지막 트릭의 조커는 낼 수 있지만 트릭을 이기지 못한다 → `isJokerEffective`.
+ */
+export function isJokerRestrictedTrick(trickNo: number): boolean {
+  return trickNo === 0;
+}
+
+/**
  * 강약 점수. 클수록 강하다. 0 은 "이길 수 없음".
  * 동점은 호출부에서 **먼저 낸 쪽** 우선으로 처리한다.
  */
@@ -115,32 +128,48 @@ export function legalPlays(
   const mighty = mightyCard(ctx.trump);
   const hasMighty = hand.includes(mighty);
   const hasJoker = hand.includes(JOKER);
+  const jokerBanned = isJokerRestrictedTrick(ctx.trickNo);
+
+  /** 조커를 걸러낸다. 그러면 낼 게 없어지는 경우엔 어쩔 수 없이 원본을 돌려준다. */
+  const dropJoker = (cards: readonly Card[]): Card[] => {
+    if (!jokerBanned) return cards.slice();
+    const without = cards.filter((card) => !isJoker(card));
+    return without.length > 0 ? without : cards.slice();
+  };
 
   // 1. 조커콜 강제 — 팔로우보다 우선한다.
+  //    (조커콜은 첫 트릭에 할 수 없으므로 여기서 조커 금지와 겹치지 않는다)
   if (ctx.jokerCalled && hasJoker && !ctx.isLeading) {
     return hasMighty ? [JOKER, mighty] : [JOKER];
   }
 
   // 2. 리드
   if (ctx.isLeading) {
-    if (!ctx.isFirstTrickLead || ctx.trump === 'NT') return hand.slice();
-    const nonTrump = hand.filter((card) => suitOf(card) !== ctx.trump);
-    // 전부 기루다면 어쩔 수 없이 기루다 리드 허용
-    return nonTrump.length > 0 ? nonTrump : hand.slice();
+    if (!ctx.isFirstTrickLead) return dropJoker(hand);
+
+    // 첫 트릭 리드에는 금지가 둘 겹친다: 조커 금지 + 기루다 리드 금지.
+    // 조커 금지를 먼저 적용하고, 그 결과가 전부 기루다면 기루다 리드를 허용한다
+    // (예: 기루다 9장 + 조커 → 조커를 강제로 내게 하는 것보다 기루다 리드가 자연스럽다).
+    let candidates = dropJoker(hand);
+    if (ctx.trump !== 'NT') {
+      const nonTrump = candidates.filter((card) => suitOf(card) !== ctx.trump);
+      if (nonTrump.length > 0) candidates = nonTrump;
+    }
+    return candidates;
   }
 
   // 3. 팔로우
-  if (ctx.leadSuit === null) return hand.slice();
+  if (ctx.leadSuit === null) return dropJoker(hand);
 
   const inSuit = hand.filter((card) => suitOf(card) === ctx.leadSuit);
-  if (inSuit.length === 0) return hand.slice();
+  if (inSuit.length === 0) return dropJoker(hand);
 
   // 리드 무늬가 마이티 한 장뿐이면 강제 제출 — 조커로 빠져나갈 수 없다.
   if (inSuit.length === 1 && inSuit[0] === mighty) return [mighty];
 
   const allowed = new Set(inSuit);
   if (hasMighty) allowed.add(mighty);
-  if (hasJoker) allowed.add(JOKER);
+  if (hasJoker && !jokerBanned) allowed.add(JOKER);
   return [...allowed];
 }
 

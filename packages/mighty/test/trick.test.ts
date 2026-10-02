@@ -3,6 +3,7 @@ import { JOKER, makeCard, mightyCard } from '../src/cards.js';
 import {
   LAST_TRICK,
   canCallJoker,
+  isJokerRestrictedTrick,
   cardStrength,
   isJokerEffective,
   legalPlays,
@@ -250,6 +251,74 @@ describe('합법 제출 카드', () => {
       const allowed = legalPlays(hand, playCtx({ isLeading: true, isFirstTrickLead: false }));
       expect(allowed.sort()).toEqual(hand.slice().sort());
     });
+  });
+});
+
+describe('조커 제출 제한 (확정 룰: 첫 트릭에만 금지)', () => {
+  const playCtx = (over: Partial<LegalPlayContext> = {}): LegalPlayContext => ({
+    ...ctx(),
+    isLeading: false,
+    isFirstTrickLead: false,
+    ...over,
+  });
+
+  it('첫 트릭에만 금지된다', () => {
+    expect(isJokerRestrictedTrick(0)).toBe(true);
+    expect(isJokerRestrictedTrick(1)).toBe(false);
+    expect(isJokerRestrictedTrick(LAST_TRICK)).toBe(false);
+  });
+
+  it('첫 트릭에는 팔로우로도 조커를 낼 수 없다', () => {
+    const hand = [C('S', 5), JOKER, C('C', 2)];
+    const allowed = legalPlays(hand, playCtx({ trickNo: 0 }));
+    expect(allowed).not.toContain(JOKER);
+    expect(allowed).toContain(C('S', 5));
+  });
+
+  it('첫 트릭에는 리드로도 조커를 낼 수 없다', () => {
+    const hand = [JOKER, C('S', 5), C('C', 2)];
+    const allowed = legalPlays(
+      hand,
+      playCtx({ trickNo: 0, isLeading: true, isFirstTrickLead: true }),
+    );
+    expect(allowed).not.toContain(JOKER);
+  });
+
+  it('첫 트릭에 리드 무늬가 없어도 조커는 안 된다', () => {
+    const hand = [JOKER, C('C', 2), C('D', 4)];
+    const allowed = legalPlays(hand, playCtx({ trickNo: 0 }));
+    expect(allowed.sort()).toEqual([C('C', 2), C('D', 4)].sort());
+  });
+
+  it('두 번째 트릭부터는 조커를 낼 수 있다', () => {
+    const hand = [C('S', 5), JOKER, C('C', 2)];
+    expect(legalPlays(hand, playCtx({ trickNo: 1 }))).toContain(JOKER);
+  });
+
+  it('마지막 트릭에는 낼 수 있다 — 효력만 없다', () => {
+    const hand = [JOKER];
+    const allowed = legalPlays(
+      hand,
+      playCtx({ trickNo: LAST_TRICK, isLeading: true }),
+    );
+    expect(allowed).toEqual([JOKER]);
+    expect(isJokerEffective(ctx({ trickNo: LAST_TRICK }))).toBe(false);
+  });
+
+  it('첫 트릭에 조커밖에 없으면 어쩔 수 없이 허용한다', () => {
+    const hand = [JOKER];
+    expect(legalPlays(hand, playCtx({ trickNo: 0 }))).toEqual([JOKER]);
+  });
+
+  it('첫 트릭 리드에서 금지가 둘 겹치면 기루다 리드를 허용한다', () => {
+    // 기루다(하트) 9장 + 조커 → 조커를 강제로 내게 하는 대신 기루다 리드를 연다
+    const hand = [JOKER, C('H', 14), C('H', 9), C('H', 2)];
+    const allowed = legalPlays(
+      hand,
+      playCtx({ trickNo: 0, isLeading: true, isFirstTrickLead: true }),
+    );
+    expect(allowed).not.toContain(JOKER);
+    expect(allowed.sort()).toEqual([C('H', 14), C('H', 9), C('H', 2)].sort());
   });
 });
 
