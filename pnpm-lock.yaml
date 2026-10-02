@@ -181,6 +181,12 @@ importers:
 
   packages/core: {}
 
+  packages/mighty:
+    dependencies:
+      '@mightichu/core':
+        specifier: workspace:*
+        version: link:../core
+
 packages:
 
   '@jridgewell/resolve-uri@3.1.2':

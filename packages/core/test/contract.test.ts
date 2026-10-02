@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { findNonJsonPath } from '../src/json.js';
 import { replayRound } from '../src/replay.js';
 import { miniEngine, type MiniState } from './fixture-engine.js';
-import { playRandomGame } from './driver.js';
+import { playRandomGame } from '../src/testing.js';
 
 const PLAYERS = ['p1', 'p2', 'p3', 'p4'] as const;
 const CONFIG = { handSize: 4 } as const;

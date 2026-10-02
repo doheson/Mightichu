@@ -13,12 +13,12 @@
 
 ## 현재 상태
 
-**0단계 완료** — 모노레포 기반 + `@mightichu/core` 게임 계약.
+**1단계 완료** — 마이티 룰 엔진. 테스트 195개 통과.
 
 | 패키지 | 상태 |
 |---|---|
 | `packages/core` | ✅ 계약, 결정론 RNG, 좌석/방향, 리플레이, JSON 검사 |
-| `packages/mighty` | ⬜ 1단계 |
+| `packages/mighty` | ✅ 룰 엔진 전체 (비딜·비딩·바닥·프렌드·10트릭·점수) |
 | `packages/tichu` | ⬜ 4단계 |
 | `packages/bots` | ⬜ 2단계 (L1), 5단계 (L2) |
 | `apps/web` | ⬜ 2단계 |

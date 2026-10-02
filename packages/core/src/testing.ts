@@ -1,9 +1,15 @@
-/** 무작위 자동 대국 드라이버 — 속성 테스트의 엔진 구동부. */
+/**
+ * 테스트 하네스 — 무작위 자동 대국 드라이버.
+ *
+ * 모든 룰 엔진이 공유한다. `legalActions` 가 돌려준 액션만 쓰면서 게임이 끝날 때까지
+ * 진행하므로, "합법 수인데 apply 가 실패" 하는 계약 위반을 즉시 잡아낸다.
+ * 액션 선택에도 시드 RNG 를 쓰므로 이 함수 자체가 결정론적이다.
+ */
 
-import type { GameEngine } from '../src/engine.js';
-import { createRng, pick } from '../src/rng.js';
-import { appendAction, createRoundLog, type RoundLog } from '../src/replay.js';
-import type { PlayerId, Seed } from '../src/types.js';
+import type { GameEngine } from './engine.js';
+import { createRng, pick } from './rng.js';
+import { appendAction, createRoundLog, type RoundLog } from './replay.js';
+import type { PlayerId, Seed } from './types.js';
 
 export interface PlaythroughResult<State, Config, Action> {
   readonly finalState: State;

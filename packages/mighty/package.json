@@ -1,0 +1,16 @@
+{
+  "name": "@mightichu/mighty",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "마이티(5인) 룰 엔진 — 순수 함수, 런타임 의존성은 @mightichu/core 뿐",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@mightichu/core": "workspace:*"
+  }
+}
