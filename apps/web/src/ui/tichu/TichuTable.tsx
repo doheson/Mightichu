@@ -21,10 +21,24 @@ function polar(index: number, count: number, scale: number): React.CSSProperties
   };
 }
 
-function orderedFromMe(seats: readonly PlayerId[], me: PlayerId): readonly PlayerId[] {
+/**
+ * 나부터 **진행 순서대로** 늘어놓는다.
+ *
+ * 티츄는 반시계 진행이라 엔진의 다음 차례는 좌석 인덱스가 **감소**하는 쪽이다
+ * (`createSeating(seats, 'ccw')`). 여기서 인덱스를 증가시키면 배치와 턴 순서가
+ * 반대로 돌아 화면상 시계방향으로 보인다 — 실제로 그 버그가 있었다.
+ *
+ * 반환값의 k번째가 `polar(k)` 자리에 앉으므로, k=1(내 다음 차례)은 화면 오른쪽에 온다.
+ * 위에서 본 테이블에서 반시계 = 내 오른쪽으로 넘어가는 것이 맞다(공식 룰북의 "to his right").
+ */
+export function orderedFromMe(
+  seats: readonly PlayerId[],
+  me: PlayerId,
+): readonly PlayerId[] {
+  const n = seats.length;
   const start = seats.indexOf(me);
   if (start < 0) return seats;
-  return seats.map((_, k) => seats[(start + k) % seats.length] as PlayerId);
+  return seats.map((_, k) => seats[((start - k) % n + n) % n] as PlayerId);
 }
 
 const CALL_LABEL: Record<string, string> = { SMALL: '티츄', GRAND: '라지 티츄' };

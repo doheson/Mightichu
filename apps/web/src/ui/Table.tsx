@@ -78,8 +78,14 @@ function polar(index: number, count: number, scale: number): React.CSSProperties
   };
 }
 
-/** 나를 맨 앞으로 회전시킨 좌석 순서. 시계방향은 그대로 유지된다. */
-function orderedFromMe(seats: readonly PlayerId[], me: PlayerId): readonly PlayerId[] {
+/**
+ * 나부터 **진행 순서대로** 늘어놓는다.
+ *
+ * 마이티는 시계 진행이라 엔진의 다음 차례가 좌석 인덱스 **증가** 쪽이고,
+ * `polar` 도 각도를 키우며(화면상 시계) 배치하므로 그대로 증가시키면 맞다.
+ * 티츄는 반대라 `TichuTable.orderedFromMe` 가 따로 있다 — 섞지 말 것.
+ */
+export function orderedFromMe(seats: readonly PlayerId[], me: PlayerId): readonly PlayerId[] {
   const start = seats.indexOf(me);
   if (start < 0) return seats;
   return seats.map((_, k) => seats[(start + k) % seats.length] as PlayerId);
