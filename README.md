@@ -13,15 +13,19 @@
 
 ## 현재 상태
 
-**1단계 완료** — 마이티 룰 엔진. 테스트 195개 통과.
+**2단계 완료** — 서버 없이 마이티를 끝까지 플레이할 수 있다. 테스트 212개 통과.
+
+```bash
+pnpm --filter @mightichu/web dev     # http://localhost:5173
+```
 
 | 패키지 | 상태 |
 |---|---|
 | `packages/core` | ✅ 계약, 결정론 RNG, 좌석/방향, 리플레이, JSON 검사 |
 | `packages/mighty` | ✅ 룰 엔진 전체 (비딜·비딩·바닥·프렌드·10트릭·점수) |
 | `packages/tichu` | ⬜ 4단계 |
-| `packages/bots` | ⬜ 2단계 (L1), 5단계 (L2) |
-| `apps/web` | ⬜ 2단계 |
+| `packages/bots` | ✅ L1 랜덤 + L1.5 기본 봇 (제대로 된 L2 는 5단계) |
+| `apps/web` | ✅ React + Vite, Web Worker 에 엔진 격리 |
 | `apps/server` | ⬜ 3단계 |
 
 ## 개발
