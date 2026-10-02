@@ -1,13 +1,18 @@
 import { isSpecial, rankOf, suitOf } from '@mightichu/tichu';
 
-const SUIT_SYMBOL: Record<string, string> = { J: '◆', S: '⚔', P: '⛩', B: '★' };
-const SUIT_CLASS: Record<string, string> = { J: 'jade', S: 'sword', P: 'pagoda', B: 'star' };
+const SUIT_SYMBOL: Record<string, string> = { S: '♠', D: '♦', H: '♥', C: '♣' };
+/** 다이아·하트는 빨강 — 표준 트럼프 관례. */
+const RED_SUITS = new Set(['D', 'H']);
 const RANK_LABEL: Record<number, string> = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
+/**
+ * 특수카드는 그림으로 보여준다. 한자는 읽는 데 부담이 있고 한눈에 구분되지도 않는다.
+ * 나중에 전용 일러스트로 바꿀 자리 — 지금은 이모지로 둔다.
+ */
 const SPECIAL: Record<string, { mark: string; label: string }> = {
-  DRAGON: { mark: '龍', label: '용' },
-  PHOENIX: { mark: '鳳', label: '봉황' },
-  DOG: { mark: '犬', label: '개' },
-  SPARROW: { mark: '雀', label: '참새' },
+  DRAGON: { mark: '🐉', label: '용' },
+  PHOENIX: { mark: '🦚', label: '봉황' },
+  DOG: { mark: '🐕', label: '개' },
+  SPARROW: { mark: '🐦', label: '참새' },
 };
 
 interface Props {
@@ -32,7 +37,7 @@ export function TichuCard({
   const classes = [
     'card',
     'tcard',
-    special !== undefined ? 'tcard--special' : `tcard--${SUIT_CLASS[suit as string]}`,
+    special !== undefined ? 'tcard--special' : RED_SUITS.has(suit as string) ? 'card--red' : '',
     disabled ? 'card--disabled' : '',
     selected ? 'card--selected' : '',
     small ? 'card--small' : '',

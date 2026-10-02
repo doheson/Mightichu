@@ -12,6 +12,7 @@ export {
   SPECIALS,
   SUITS,
   SUIT_NAME,
+  SUIT_SYMBOL,
   TOTAL_POINTS,
   cardLabel,
   cardPoints,

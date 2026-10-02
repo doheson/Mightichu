@@ -5,20 +5,28 @@
  * 특수카드는 대문자 단어. 0 패딩은 리댁션 테스트의 문자열 검사에서
  * `J2` ⊂ `J12` 같은 거짓 양성을 막기 위한 것이다(core/README 규약).
  *
- * 무늬 토큰: 옥 `J`(Jade) · 검 `S`(Sword) · 탑 `P`(Pagoda) · 별 `B`(별)
+ * 무늬는 **표준 트럼프**를 쓴다 — 스페이드 `S` · 다이아 `D` · 하트 `H` · 클로버 `C`.
+ * 원작의 옥/검/탑/별 대신 익숙한 무늬로 간다(마이티와도 토큰이 같아진다).
  * 특수카드 이름은 한국어가 정식이다 — 용 / 봉황 / 개 / 참새. (docs/rules-tichu.md)
  */
 
 import type { Card } from './types.js';
 
-export const SUITS = ['J', 'S', 'P', 'B'] as const;
+export const SUITS = ['S', 'D', 'H', 'C'] as const;
 export type Suit = (typeof SUITS)[number];
 
 export const SUIT_NAME: Record<Suit, string> = {
-  J: '옥',
-  S: '검',
-  P: '탑',
-  B: '별',
+  S: '스페이드',
+  D: '다이아',
+  H: '하트',
+  C: '클로버',
+};
+
+export const SUIT_SYMBOL: Record<Suit, string> = {
+  S: '♠',
+  D: '♦',
+  H: '♥',
+  C: '♣',
 };
 
 /** 2~14. 11=J, 12=Q, 13=K, 14=A */
@@ -93,7 +101,7 @@ export function cardLabel(card: Card): string {
   if (special !== undefined) return special;
   const suit = suitOf(card) as Suit;
   const rank = rankOf(card) as Rank;
-  return `${SUIT_NAME[suit]}${RANK_LABEL[rank] ?? String(rank)}`;
+  return `${SUIT_SYMBOL[suit]}${RANK_LABEL[rank] ?? String(rank)}`;
 }
 
 /** 56장 = 4무늬 × 13장 + 특수카드 4장. */
