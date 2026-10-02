@@ -2,6 +2,10 @@ node_modules/
 dist/
 *.tsbuildinfo
 coverage/
+# IDE (옆 프로젝트들과 같은 관례 — .idea 는 추적하지 않는다)
+.idea/
+*.iml
+
 .DS_Store
 .env
 .env.local
