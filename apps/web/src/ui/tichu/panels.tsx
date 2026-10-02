@@ -175,6 +175,24 @@ const COMBO_LABEL: Record<string, string> = {
   DOG: '개 — 파트너에게 리드를 넘깁니다',
 };
 
+/** 교환으로 누가 뭘 줬는지 — 라운드 내내 참고할 수 있게 둔다. */
+function ReceivedRow({ view }: { readonly view: TichuView }): React.JSX.Element | null {
+  const seatName = useSeatName();
+  const entries = Object.entries(view.received);
+  if (entries.length === 0) return null;
+  return (
+    <div className="received">
+      <span className="received__label">받은 카드</span>
+      {entries.map(([from, card]) => (
+        <span key={from} className="received__item">
+          <span className="received__from">{seatName(from)}</span>
+          <TichuCard card={card} small disabled />
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function PlayPanel(props: PanelProps): React.JSX.Element {
   const { view, legal, send } = props;
   const [picked, setPicked] = useState<readonly Card[]>([]);
@@ -221,6 +239,8 @@ export function PlayPanel(props: PanelProps): React.JSX.Element {
         {view.wish !== null ? ` · 소원 ${view.wish} 이행 의무` : ''}
         {!myTurn && canAct ? ' · 폭탄으로 끼어들 수 있습니다' : ''}
       </p>
+
+      <ReceivedRow view={view} />
 
       <div className="hand">
         {sortHand(view.myHand).map((card) => (

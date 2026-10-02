@@ -107,11 +107,11 @@ body {
   max-height: 440px;
   min-height: 300px;
   margin: 0 auto;
-  border-radius: 50% / 46%;
+  border-radius: var(--radius);
   background:
-    radial-gradient(ellipse at 50% 42%, color-mix(in srgb, #fff 7%, var(--felt)), var(--felt) 70%);
-  border: 3px solid color-mix(in srgb, #000 30%, var(--felt));
-  box-shadow: inset 0 0 40px rgb(0 0 0 / 0.35);
+    linear-gradient(180deg, color-mix(in srgb, #fff 5%, var(--felt)), var(--felt) 60%);
+  border: 1px solid color-mix(in srgb, #000 35%, var(--felt));
+  box-shadow: inset 0 0 32px rgb(0 0 0 / 0.3);
 }
 
 .table__center {
@@ -150,6 +150,9 @@ body {
 .seat__meta { display: flex; align-items: center; gap: 5px; font-size: 11px; opacity: 0.85; }
 .seat__points { white-space: nowrap; }
 .seat__tag {
+  position: absolute;
+  bottom: -9px; left: 50%; transform: translateX(-50%);
+  white-space: nowrap;
   font-size: 10px; padding: 0 6px; border-radius: 999px;
   background: color-mix(in srgb, #fff 18%, transparent);
 }
@@ -360,7 +363,7 @@ body {
 .btn--tiny { padding: 3px 9px; font-size: 12px; }
 
 /* ── 끝난 트릭 표시 */
-.table--resolved { box-shadow: inset 0 0 40px rgb(0 0 0 / 0.35), 0 0 0 2px color-mix(in srgb, #ffd964 45%, transparent); }
+.table--resolved { box-shadow: inset 0 0 32px rgb(0 0 0 / 0.3), 0 0 0 2px color-mix(in srgb, #ffd964 45%, transparent); }
 
 .table__winner {
   font-size: 15px;
@@ -393,7 +396,13 @@ body {
 .tcard .card__suit { font-size: 14px; letter-spacing: -0.02em; }
 .tcard.card--small .card__suit { font-size: 11px; }
 
-.trickslot--combo { display: flex; gap: 2px; }
+/* 조합은 최대 5장까지 나올 수 있다 — 좌석과 겹치지 않게 작고 촘촘하게 */
+.trickslot--combo { display: flex; gap: 1px; }
+.trickslot--combo .card--small { width: 26px; height: 36px; border-radius: 4px; }
+.trickslot--combo .card--small .card__rank { font-size: 11px; }
+.trickslot--combo .card--small .card__suit { font-size: 9px; }
+.trickslot--combo .tcard--special.card--small .card__rank { font-size: 14px; }
+.trickslot--combo .tcard--special.card--small .card__suit { font-size: 7px; }
 
 .pill {
   font-size: 10px; padding: 1px 6px; border-radius: 999px;
@@ -434,3 +443,37 @@ body {
 
 /* 특수카드 라벨은 작게 (용/봉황/개/참새) */
 .tcard--special .card__suit { font-size: 9px; font-weight: 700; }
+
+/* ── 팀 색 (티츄) */
+.team--blue { color: #5b9bf5; }
+.team--red  { color: #f2706b; }
+.team { font-weight: 700; }
+
+.seat--blue { border-color: color-mix(in srgb, #5b9bf5 60%, transparent); }
+.seat--red  { border-color: color-mix(in srgb, #f2706b 60%, transparent); }
+.seat--me   { border-color: #ffd964; border-width: 2px; }
+
+.versus {
+  display: flex; align-items: baseline; justify-content: center; gap: 14px;
+  padding: 6px 0 2px;
+}
+.versus__score { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.versus__score--blue { color: #5b9bf5; }
+.versus__score--red  { color: #f2706b; }
+.versus__vs { font-size: 20px; color: var(--text-dim); }
+
+.scores td.team--blue, .scores td.team--red { font-weight: 800; }
+
+/* ── 교환으로 받은 카드 */
+.received {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 7px 9px;
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+.received__label {
+  font-size: 11px; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.received__item { display: flex; align-items: center; gap: 5px; }
+.received__from { font-size: 12px; color: var(--text-dim); }

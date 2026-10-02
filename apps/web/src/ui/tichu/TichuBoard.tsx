@@ -4,7 +4,7 @@ import type { RoundScore } from '@mightichu/core';
 import type { TichuAction, TichuView } from '../../game/tichuTypes.js';
 import { Log } from '../Table.js';
 import { useSeatName } from '../names.js';
-import { TichuTable } from './TichuTable.js';
+import { TichuTable, teamOf } from './TichuTable.js';
 import { DragonPanel, ExchangePanel, GrandPanel, PlayPanel } from './panels.js';
 
 export interface TichuBoardProps {
@@ -48,12 +48,8 @@ export function TichuBoard({
         </div>
         <div className="header__item">
           <span className="label">우리 팀</span>
-          <strong>{teamMine.map(seatName).join(' · ')}</strong>
-        </div>
-        <div className="header__item">
-          <span className="label">우리 점수</span>
-          <strong>
-            {teamMine.reduce((n, p) => n + (view.takenPoints[p] ?? 0), 0)}점
+          <strong className={`team team--${teamOf(view.seats, view.me)}`}>
+            {teamOf(view.seats, view.me) === 'blue' ? '파랑' : '빨강'} · {teamMine.map(seatName).join(' · ')}
           </strong>
         </div>
         <div className="header__item">
@@ -114,39 +110,39 @@ function TichuResult({
   const double = detail.outcome === 'DOUBLE_WIN';
 
   const teams = [
-    [view.seats[0] as string, view.seats[2] as string],
-    [view.seats[1] as string, view.seats[3] as string],
+    { color: 'blue' as const, name: '파랑', seats: [view.seats[0] as string, view.seats[2] as string] },
+    { color: 'red' as const, name: '빨강', seats: [view.seats[1] as string, view.seats[3] as string] },
   ];
 
   return (
     <div className="panel">
-      <h2 className="result__title">
-        {double ? '더블윈! (200점)' : '라운드 종료'}
-      </h2>
+      <h2 className="result__title">{double ? '더블윈! (200점)' : '라운드 종료'}</h2>
       {detail.winner != null ? (
         <p className="panel__hint">1등: {seatName(detail.winner)}</p>
       ) : null}
 
+      {/* 몇 대 몇인지 한눈에 */}
+      <div className="versus">
+        <span className="versus__score versus__score--blue">{detail.teamTotals?.[0] ?? 0}</span>
+        <span className="versus__vs">:</span>
+        <span className="versus__score versus__score--red">{detail.teamTotals?.[1] ?? 0}</span>
+      </div>
+
       <table className="scores">
         <tbody>
           {teams.map((team, i) => (
-            <tr key={team.join('-')} className={team.includes(view.me) ? 'scores__me' : ''}>
-              <td>{team.map(seatName).join(' · ')}</td>
+            <tr key={team.name} className={team.seats.includes(view.me) ? 'scores__me' : ''}>
+              <td>
+                <span className={`team team--${team.color}`}>{team.name}</span>{' '}
+                {team.seats.map(seatName).join(' · ')}
+              </td>
               <td>
                 카드 {detail.cardPoints?.[i] ?? 0}
                 {(detail.callPoints?.[i] ?? 0) !== 0
                   ? ` · 선언 ${(detail.callPoints?.[i] ?? 0) > 0 ? '+' : ''}${detail.callPoints?.[i] ?? 0}`
                   : ''}
               </td>
-              <td
-                className={
-                  (detail.teamTotals?.[i] ?? 0) > 0
-                    ? 'pos'
-                    : (detail.teamTotals?.[i] ?? 0) < 0
-                      ? 'neg'
-                      : ''
-                }
-              >
+              <td className={`team--${team.color}`}>
                 {(detail.teamTotals?.[i] ?? 0) > 0 ? '+' : ''}
                 {detail.teamTotals?.[i] ?? 0}
               </td>

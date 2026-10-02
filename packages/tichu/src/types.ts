@@ -49,6 +49,11 @@ export type TichuState = {
 
   /** 교환으로 보낸 카드: 보낸사람 → 받는사람 → 카드 */
   readonly given: Readonly<Record<PlayerId, Readonly<Record<PlayerId, Card>>>>;
+  /**
+   * 교환으로 받은 카드: 받는사람 → 보낸사람 → 카드.
+   * **교환이 모두 끝난 뒤에만** 채워진다 — 그전에 채우면 미리 들여다볼 수 있다.
+   */
+  readonly received: Readonly<Record<PlayerId, Readonly<Record<PlayerId, Card>>>>;
 
   readonly leader: PlayerId | null;
   readonly turn: PlayerId | null;
@@ -112,6 +117,8 @@ export type TichuView = {
   readonly givePending: readonly PlayerId[];
   /** 교환을 끝낸 사람 (공개 — 누가 아직인지 알아야 기다릴 수 있다). */
   readonly exchangeDone: readonly PlayerId[];
+  /** **나에게** 온 카드: 보낸사람 → 카드. 교환이 끝나야 채워진다. */
+  readonly received: Readonly<Record<PlayerId, Card>>;
 
   readonly leader: PlayerId | null;
   readonly turn: PlayerId | null;

@@ -284,3 +284,48 @@ describe('티츄 고유 불변식', () => {
     expect(PLAYER_COUNT).toBe(4);
   });
 });
+
+describe('교환 내역 공개', () => {
+  it('교환 전에는 받을 카드가 뷰에 없다', () => {
+    fc.assert(
+      fc.property(seeds, (seed) => {
+        for (const state of play(seed).states) {
+          if (state.phase !== 'EXCHANGE') continue;
+          for (const viewer of PLAYERS) {
+            expect(Object.keys(tichuEngine.view(state, viewer).received)).toHaveLength(0);
+          }
+        }
+      }),
+      { numRuns: 30 },
+    );
+  });
+
+  it('교환 후에는 누가 뭘 보냈는지 **나에게 온 것만** 보인다', () => {
+    fc.assert(
+      fc.property(seeds, (seed) => {
+        const afterExchange = play(seed).states.find((s) => s.phase === 'PLAY');
+        if (afterExchange === undefined) return;
+        for (const viewer of PLAYERS) {
+          const view = tichuEngine.view(afterExchange, viewer);
+          const senders = Object.keys(view.received);
+          expect(senders).toHaveLength(PLAYERS.length - 1);
+          expect(senders).not.toContain(viewer);
+          // 받은 카드는 전부 내 손에 있다
+          for (const card of Object.values(view.received)) {
+            expect(view.myHand).toContain(card);
+          }
+          // 남이 받은 카드는 노출되지 않는다
+          const json = JSON.stringify(view);
+          for (const other of PLAYERS) {
+            if (other === viewer) continue;
+            for (const card of Object.values(afterExchange.received[other] ?? {})) {
+              if (view.myHand.includes(card)) continue;
+              expect(json).not.toContain(card);
+            }
+          }
+        }
+      }),
+      { numRuns: 40 },
+    );
+  });
+});

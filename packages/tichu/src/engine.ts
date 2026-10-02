@@ -111,6 +111,7 @@ function deal(config: TichuConfig, players: readonly PlayerId[], seed: number): 
   const calls: Record<PlayerId, 'NONE'> = {};
   const hasPlayed: Record<PlayerId, boolean> = {};
   const given: Record<PlayerId, Record<PlayerId, Card>> = {};
+  const received: Record<PlayerId, Record<PlayerId, Card>> = {};
   const taken: Record<PlayerId, readonly Card[]> = {};
 
   seats.forEach((player, index) => {
@@ -120,6 +121,7 @@ function deal(config: TichuConfig, players: readonly PlayerId[], seed: number): 
     calls[player] = 'NONE';
     hasPlayed[player] = false;
     given[player] = {};
+    received[player] = {};
     taken[player] = [];
   });
 
@@ -132,6 +134,7 @@ function deal(config: TichuConfig, players: readonly PlayerId[], seed: number): 
     grandDecided: [],
     hasPlayed,
     given,
+    received,
     leader: null,
     turn: null,
     currentTrick: [],
@@ -171,9 +174,12 @@ function finishExchange(state: TichuState): TichuState {
     const sent = new Set(Object.values(state.given[seat] ?? {}));
     hands[seat] = handOf(state, seat).filter((c) => !sent.has(c));
   }
+  const received: Record<PlayerId, Record<PlayerId, Card>> = {};
+  for (const seat of state.seats) received[seat] = {};
   for (const from of state.seats) {
     for (const [to, card] of Object.entries(state.given[from] ?? {})) {
       (hands[to] as Card[]).push(card);
+      (received[to] as Record<PlayerId, Card>)[from] = card;
     }
   }
   // 참새를 쥔 사람이 첫 리드
@@ -185,6 +191,7 @@ function finishExchange(state: TichuState): TichuState {
     ...state,
     phase: 'PLAY',
     hands,
+    received,
     leader,
     turn: leader,
     currentTrick: [],
@@ -660,6 +667,7 @@ function buildView(state: TichuState, viewer: PlayerId): TichuView {
     grandDecided: state.grandDecided,
     givePending,
     exchangeDone: state.seats.filter((p) => exchangeDone(state, p)),
+    received: state.received[viewer] ?? {},
     leader: state.leader,
     turn: state.turn,
     currentTrick: state.currentTrick,

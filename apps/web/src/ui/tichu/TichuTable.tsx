@@ -29,6 +29,14 @@ function orderedFromMe(seats: readonly PlayerId[], me: PlayerId): readonly Playe
 
 const CALL_LABEL: Record<string, string> = { SMALL: '티츄', GRAND: '라지 티츄' };
 
+/**
+ * 팀 색: 좌석 0·2 가 파랑, 1·3 이 빨강.
+ * 마주 앉은 둘이 한 팀이므로 색만 보면 편이 바로 읽힌다.
+ */
+export function teamOf(seats: readonly PlayerId[], seat: PlayerId): 'blue' | 'red' {
+  return seats.indexOf(seat) % 2 === 0 ? 'blue' : 'red';
+}
+
 export function TichuTable({ view }: { readonly view: TichuView }): React.JSX.Element {
   const seatName = useSeatName();
   const ordered = orderedFromMe(view.seats, view.me);
@@ -57,8 +65,13 @@ export function TichuTable({ view }: { readonly view: TichuView }): React.JSX.El
             <span className="table__trickno">소원 {view.wish}</span>
             <span className="table__hint">이행 의무</span>
           </>
+        ) : view.phase === 'PLAY' ? (
+          // 플레이 중에는 비워둔다 — 여기가 카드가 놓이는 자리다
+          null
         ) : (
-          <span className="table__hint">{view.phase === 'PLAY' ? '티츄' : '준비'}</span>
+          <span className="table__hint">
+            {view.phase === 'GRAND' ? '라지 티츄' : view.phase === 'EXCHANGE' ? '카드 교환' : ''}
+          </span>
         )}
       </div>
 
@@ -73,8 +86,8 @@ export function TichuTable({ view }: { readonly view: TichuView }): React.JSX.El
             <div
               className={[
                 'seat',
+                `seat--${teamOf(view.seats, seat)}`,
                 seat === view.me ? 'seat--me' : '',
-                seat === view.partner ? 'seat--partner' : '',
                 isTurn ? 'seat--turn' : '',
                 isWinner ? 'seat--won' : '',
               ]
@@ -87,9 +100,12 @@ export function TichuTable({ view }: { readonly view: TichuView }): React.JSX.El
                 {seat === view.partner ? ' 🤝' : ''}
                 {place >= 0 ? ` ${place + 1}등` : ''}
               </div>
+              {/* 라운드 중에는 획득 점수를 보여주지 않는다 — 끝날 때 팀 점수로 한 번에 공개한다 */}
               <div className="seat__meta">
                 <span className="pill">{view.handCounts[seat] ?? 0}장</span>
-                <span className="seat__points">{view.takenPoints[seat] ?? 0}점</span>
+                {(view.takenCounts[seat] ?? 0) > 0 ? (
+                  <span className="seat__points">먹은 {view.takenCounts[seat]}장</span>
+                ) : null}
               </div>
               {call !== undefined && call !== 'NONE' ? (
                 <div className={`seat__tag seat__tag--${call === 'GRAND' ? 'grand' : 'tichu'}`}>
@@ -99,7 +115,7 @@ export function TichuTable({ view }: { readonly view: TichuView }): React.JSX.El
               {isWinner ? <div className="seat__tag seat__tag--won">획득 {wonPoints}</div> : null}
             </div>
 
-            <div className="trickslot trickslot--combo" style={polar(index, ordered.length, 0.46)}>
+            <div className="trickslot trickslot--combo" style={polar(index, ordered.length, 0.3)}>
               {cards.map((card) => (
                 <TichuCard key={card} card={card} small disabled />
               ))}
