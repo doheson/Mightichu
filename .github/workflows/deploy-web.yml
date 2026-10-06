@@ -1,0 +1,61 @@
+# 웹(AI 모드)을 GitHub Pages 로 배포한다.
+#
+# AI 모드는 **서버가 필요 없다** — 엔진과 봇이 브라우저 워커 안에서 돈다.
+# 그래서 정적 호스팅만으로 게임이 완전히 돌아간다.
+# 온라인 모드는 별도 서버(Fly.io)가 떠 있어야 붙는다.
+
+name: deploy web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포는 한 번에 하나만. 중간 커밋은 건너뛴다.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # 룰 엔진이 틀린 채로 배포되면 안 된다
+      - run: pnpm vitest run
+
+      - run: pnpm --filter @mightichu/web build
+        env:
+          # 프로젝트 페이지라 저장소 이름이 경로에 붙는다
+          VITE_BASE: /${{ github.event.repository.name }}/
+          # 서버가 아직 없으면 비워둔다 — 온라인 모드만 안 되고 AI 모드는 정상
+          VITE_SERVER_URL: ${{ vars.SERVER_URL }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
