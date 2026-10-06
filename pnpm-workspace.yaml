@@ -2,6 +2,10 @@ packages:
   - 'packages/*'
   - 'apps/*'
 
-# vite 가 쓰는 esbuild 는 네이티브 바이너리 설치 스크립트가 필요하다
-onlyBuiltDependencies:
-  - esbuild
+# esbuild 의 postinstall 은 돌리지 않는다.
+#
+# vite 는 플랫폼별 바이너리 패키지(@esbuild/<platform>)를 직접 쓰므로
+# 이 스크립트가 없어도 빌드가 정상 동작한다. pnpm 10+ 는 무시되는 빌드 스크립트가
+# 있으면 설치를 실패시키므로, **의도적으로 무시한다고 명시**해 둔다.
+allowBuilds:
+  esbuild: false
