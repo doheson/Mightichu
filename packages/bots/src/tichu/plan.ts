@@ -153,7 +153,18 @@ export function tichuScore(hand: readonly Card[]): number {
  */
 export function shouldCallTichu(hand: readonly Card[]): boolean {
   const plan = planHand(hand);
-  return plan.lotCount <= 5 && plan.control >= 3;
+  if (plan.lotCount <= 5 && plan.control >= 3) return true;
+
+  /**
+   * 통용 기준 "A+봉황 / A+용 / 에이스 3장이면 부른다" 는 **첫 8장 기준**이다.
+   * 14장 전체에 그대로 적용하면 거의 매번 걸려 오히려 크게 손해다 —
+   * 실측에서 선언이 58 → 469 로 늘고 성공률이 53% → 36%, 판당 EV 가 −22 가 됐다.
+   *
+   * 그래서 에이스 3장만 보조 기준으로 둔다(14장에서도 충분히 드물고 강하다).
+   */
+  // 에이스 3장만으로도 완화해 봤지만 선언 102 성공 48.0% 판당 −0.67 로 역시 손해였다.
+  // **측정으로 잡은 기준만 남긴다.**
+  return false;
 }
 
 /**

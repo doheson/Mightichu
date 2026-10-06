@@ -58,7 +58,23 @@ function currentWinner(view: TichuView): string | null {
   return last?.player ?? null;
 }
 
-export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
+/** 휴리스틱 하나하나를 켜고 끌 수 있게 — A/B 로 효과를 재기 위해서다. */
+export interface TichuBotOptions {
+  /** 상대가 티츄를 불렀을 때 폭탄으로 저지한다. */
+  readonly blockTichuWithBomb?: boolean;
+  /** 이길 때 현재 조합보다 **가장 조금** 높은 것을 고른다. */
+  readonly minimalStep?: boolean;
+  /** 용 트릭을 "오른쪽 상대" 에게 넘긴다(관례). 끄면 점수가 적은 상대. */
+  readonly dragonToRight?: boolean;
+}
+
+export function createTichuBasicBot(
+  options: TichuBotOptions = {},
+): Bot<TichuView, TichuAction> {
+  const blockTichuWithBomb = options.blockTichuWithBomb ?? true;
+  const minimalStep = options.minimalStep ?? true;
+  const dragonToRight = options.dragonToRight ?? true;
+
   return {
     id: 'tichu-basic',
     label: '기본 봇',
@@ -75,8 +91,23 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
       if (meaningful.length === 0) return false;
       if (view.phase !== 'PLAY') return true;
       if (view.turn === view.me) return true;
-      // 내 차례가 아니면 폭탄만 가능하다 — 큰 트릭에서만, 그리고 **파트너가 이기고 있으면 안 쓴다**
+      // 내 차례가 아니면 폭탄만 가능하다. 파트너가 이기고 있으면 쓰지 않는다.
       if (view.partner !== null && currentWinner(view) === view.partner) return false;
+
+      /**
+       * **상대가 티츄를 불렀으면 폭탄으로 막는다.**
+       * 티츄 저지는 ±100 을 뒤집는 일이라 트릭 점수보다 가치가 크다.
+       * 다만 너무 이르면 상대가 다시 선을 잡으므로 손패가 줄었을 때 쓴다.
+       */
+      const opponentCalled = view.seats.some(
+        (p) =>
+          p !== view.me &&
+          p !== view.partner &&
+          (view.calls[p] ?? 'NONE') !== 'NONE' &&
+          !view.finished.includes(p),
+      );
+      if (blockTichuWithBomb && opponentCalled && view.myHand.length <= 8) return true;
+
       const points = countPoints(view.currentTrick.flatMap((p) => p.combo.cards));
       return points >= 15;
     },
@@ -131,9 +162,28 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
         (a): a is Extract<TichuAction, { type: 'GIVE_DRAGON' }> => a.type === 'GIVE_DRAGON',
       );
       if (gifts.length > 0) {
-        return [...gifts].sort(
-          (a, b) => (view.takenPoints[a.to] ?? 0) - (view.takenPoints[b.to] ?? 0),
-        )[0] as TichuAction;
+        /**
+         * **용 트릭은 "오른쪽 상대"에게 넘긴다** — 진행 방향상 내 다음 차례인 상대.
+         *
+         * 통용 관례다. 각자 한 번씩 선을 잡고 나가면 내 오른쪽 사람이 가장 늦게
+         * 나가게 되므로, 25점을 줘도 그 사람이 선을 활용할 기회가 가장 적다.
+         * (점수를 덜 가진 쪽에 주는 것보다 이쪽이 정석이다)
+         */
+        const order = view.seats;
+        const myIndex = order.indexOf(view.me);
+        const rightward = Array.from({ length: order.length - 1 }, (_, k) =>
+          order[((myIndex - (k + 1)) % order.length + order.length) % order.length],
+        );
+        if (!dragonToRight) {
+          return [...gifts].sort(
+            (a, b) => (view.takenPoints[a.to] ?? 0) - (view.takenPoints[b.to] ?? 0),
+          )[0] as TichuAction;
+        }
+        const preferred = rightward.find((seat) =>
+          gifts.some((g) => g.to === seat),
+        );
+        const chosen = gifts.find((g) => g.to === preferred) ?? gifts[0];
+        return chosen as TichuAction;
       }
 
       // ── 플레이
@@ -246,8 +296,27 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
             a.cards.length !== 1 ||
             !isHighestLeft(a.cards[0] as Card, hand, view.playedCards),
         );
-        const pick = notTopCard.length > 0 && trickPoints < 20 ? notTopCard : afterPremium;
-        return pick[0] as TichuAction;
+        const pool3 = notTopCard.length > 0 && trickPoints < 20 ? notTopCard : afterPremium;
+
+        /**
+         * **딱 한 단계 위로만 이긴다.**
+         *
+         * "이길 수 있다고 꼭 세게 이겨야 하는 건 아니다" — 에이스로 3을 잡으면
+         * 그 에이스는 정작 필요할 때 없다. 현재 조합보다 **가장 조금 높은** 것을 고른다.
+         */
+        const current = view.currentCombo;
+        if (minimalStep && current !== null) {
+          const stepped = [...pool3].sort((a, b) => {
+            const ca = parseCards(a.cards, current);
+            const cb = parseCards(b.cards, current);
+            const da = ca === null ? Infinity : ca.rank2 - current.rank2;
+            const dbb = cb === null ? Infinity : cb.rank2 - current.rank2;
+            if (da !== dbb) return da - dbb;
+            return comboCost(a.cards) - comboCost(b.cards);
+          });
+          return stepped[0] as TichuAction;
+        }
+        return pool3[0] as TichuAction;
       }
 
       if (pass !== undefined) return pass;

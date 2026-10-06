@@ -122,7 +122,20 @@ function cardsOf(actions: readonly MightyAction[]): MightyAction[] {
   return actions.filter((a) => a.type === 'PLAY_CARD');
 }
 
-export function createMightyBasicBot(): Bot<MightyView, MightyAction> {
+/** 휴리스틱을 켜고 끌 수 있게 — A/B 로 효과를 재기 위해서다. */
+export interface MightyBotOptions {
+  /** 프렌드는 선을 잡으면 낮은 기루다를 돌린다. */
+  readonly friendReturnsTrump?: boolean;
+  /** 야당은 마이티 무늬를 쳐서 마이티를 끌어낸다(마공). */
+  readonly defenderAttacksMighty?: boolean;
+}
+
+export function createMightyBasicBot(
+  options: MightyBotOptions = {},
+): Bot<MightyView, MightyAction> {
+  const friendReturnsTrump = options.friendReturnsTrump ?? true;
+  const defenderAttacksMighty = options.defenderAttacksMighty ?? true;
+
   return {
     id: 'mighty-basic',
     label: '기본 봇',
@@ -233,6 +246,51 @@ export function createMightyBasicBot(): Bot<MightyView, MightyAction> {
             if (suit === null) return true;
             return ruffRisk(suit, view, allies) === 0;
           };
+
+          const mighty = mightyCard(trump);
+          const mightyOut = view.playedCards.includes(mighty);
+
+          /**
+           * **프렌드는 선을 잡으면 낮은 기루다를 돌린다.** (마이티 정석)
+           *
+           * 낮은 기루다를 흘려야 주공이 마이티나 높은 기루다로 턴을 회수하면서
+           * 야당의 기루다를 뽑아낼 수 있다. 높은 기루다를 내면 주공이 회수할 수가
+           * 없어 턴이 야당에게 넘어간다.
+           */
+          if (friendReturnsTrump && view.iAmFriend && trump !== 'NT') {
+            const myTrumps = plays.filter((a) =>
+              isTrumpCard(a.type === 'PLAY_CARD' ? a.card : '', trump),
+            );
+            if (myTrumps.length > 0) {
+              return [...myTrumps].sort(
+                (a, b) =>
+                  (rankOf(a.type === 'PLAY_CARD' ? a.card : '') ?? 0) -
+                  (rankOf(b.type === 'PLAY_CARD' ? b.card : '') ?? 0),
+              )[0] as MightyAction;
+            }
+          }
+
+          /**
+           * **야당의 마공** — 마이티 무늬를 쳐서 마이티를 끌어낸다.
+           *
+           * 마이티는 자기 무늬가 리드됐을 때 그 무늬 카드가 그것뿐이면 반드시 나와야 한다.
+           * 계속 치면 결국 끌려 나오고, 그 뒤로는 여당의 최강 카드가 사라진다.
+           */
+          const amDefender = view.declarer !== view.me && !view.iAmFriend;
+          if (defenderAttacksMighty && amDefender && !mightyOut) {
+            const attack = plays.filter((a) => {
+              const card = a.type === 'PLAY_CARD' ? a.card : '';
+              return suitOf(card) === suitOf(mighty) && card !== mighty;
+            });
+            if (attack.length > 0) {
+              // 점수카드를 헌납하지 않게 낮은 것부터
+              return [...attack].sort(
+                (a, b) =>
+                  keepValue(a.type === 'PLAY_CARD' ? a.card : '', trump) -
+                  keepValue(b.type === 'PLAY_CARD' ? b.card : '', trump),
+              )[0] as MightyAction;
+            }
+          }
 
           const sureWinners = plays.filter((a) => {
             const card = a.type === 'PLAY_CARD' ? a.card : '';
