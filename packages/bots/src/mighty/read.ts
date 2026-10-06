@@ -100,7 +100,16 @@ export function knownAllies(view: MightyView): Set<string> {
  */
 export function likelyAlly(view: MightyView, player: string): boolean {
   if (player === view.me) return true;
-  if (view.declarer === player) return false;
+
+  /**
+   * **내가 프렌드면 주공은 아군이다.**
+   *
+   * 여기를 무조건 false 로 두면 프렌드가 주공이 이미 이기고 있는 트릭에
+   * 마이티를 던진다. 실제로 그 버그가 있었다 —
+   * 주공이 기루다 A 로 리드했는데(질 수가 없다) 프렌드가 마이티를 꺼내 날렸다.
+   */
+  if (view.declarer === player) return view.iAmFriend;
+
   if (view.friend === player) return view.iAmFriend || view.declarer === view.me;
   // 나도 야당이고 상대도 주공이 아니면 아군일 확률이 높다
   return view.declarer !== view.me && !view.iAmFriend;

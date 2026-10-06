@@ -123,3 +123,122 @@ describe('판 읽기 — 공개 정보만으로', () => {
     expect(voids.get('p3')).toBeUndefined();
   });
 });
+
+describe('프렌드는 주공이 이미 이기는 트릭을 밟지 않는다', () => {
+  /**
+   * 실제 제보 상황.
+   * 주공이 기루다(다이아) A 로 리드했다 — 마이티·조커 말고는 질 수가 없다.
+   * 그런데 프렌드가 마이티를 꺼내 날려버렸다.
+   *
+   * 좌석은 p1..p5 시계방향이므로 **currentTrick 의 마지막 다음 좌석이 차례**다.
+   * 프렌드 p2 가 움직이게 하려면 트릭이 p1 까지만 차 있어야 한다.
+   */
+  function playState(over: {
+    readonly declarer: string;
+    readonly friend: string;
+    readonly leader: string;
+    readonly trick: readonly { player: string; card: string }[];
+    readonly hands: Record<string, string[]>;
+    readonly trump: 'S' | 'D' | 'H' | 'C';
+  }): Parameters<typeof mightyEngine.view>[0] {
+    const base = mightyEngine.init({ config: {}, players: P, seed: 1 });
+    const points: Record<string, number> = {};
+    for (const p of P) points[p] = 0;
+    return {
+      ...base,
+      phase: 'PLAY',
+      hands: over.hands,
+      kitty: [],
+      discarded: [],
+      misdealEligible: [],
+      currentBidder: null,
+      passed: [],
+      highestBid: { player: over.declarer, bid: { trump: over.trump, count: 15 } },
+      declarer: over.declarer,
+      contract: { trump: over.trump, count: 15 },
+      friendCall: { kind: 'MIGHTY' },
+      friend: over.friend,
+      friendRevealed: false,
+      trickNo: 3,
+      leader: over.leader,
+      currentTrick: over.trick,
+      jokerCalled: false,
+      jokerNomination: null,
+      points,
+      playedCards: over.trick.map((t) => t.card),
+      trickHistory: [],
+      lastTrick: null,
+      outcome: null,
+    } as unknown as Parameters<typeof mightyEngine.view>[0];
+  }
+
+  function decide(state: Parameters<typeof mightyEngine.view>[0], seat: string) {
+    const legal = mightyEngine.legalActions(state, seat);
+    expect(legal.length, `${seat} 차례가 아님`).toBeGreaterThan(0);
+    return createMightyBasicBot().decide({
+      me: seat,
+      view: mightyEngine.view(state, seat),
+      legal,
+      rng: createRng(1),
+    }) as { type: string; card?: string };
+  }
+
+  it('주공이 기루다 A 로 리드하면 프렌드는 마이티를 내지 않는다', () => {
+    const state = playState({
+      declarer: 'p1',
+      friend: 'p2',
+      leader: 'p1',
+      trump: 'D',
+      trick: [{ player: 'p1', card: 'D14' }], // 기루다 에이스 — 질 수가 없다
+      hands: {
+        p1: ['D13', 'S02'],
+        p2: ['S14', 'C05', 'H03'], // 프렌드 — 마이티(♠A) 보유
+        p3: ['C09', 'H07'],
+        p4: ['C10', 'H08'],
+        p5: ['C11', 'H09'],
+      },
+    });
+    expect(mightyEngine.view(state, 'p2').iAmFriend).toBe(true);
+    expect(decide(state, 'p2').card).not.toBe('S14');
+  });
+
+  it('주공의 리드 자체가 점수카드여도 밟지 않는다', () => {
+    const state = playState({
+      declarer: 'p1',
+      friend: 'p2',
+      leader: 'p1',
+      trump: 'D',
+      trick: [{ player: 'p1', card: 'D14' }],
+      hands: {
+        p1: ['D13'],
+        p2: ['S14', 'H13'], // 마이티 + 점수카드
+        p3: ['C09'],
+        p4: ['C10'],
+        p5: ['C11'],
+      },
+    });
+    expect(decide(state, 'p2').card).not.toBe('S14');
+  });
+
+  it('주공이 야당에게 밀리고 있으면 프렌드가 마이티로 구해준다', () => {
+    // 주공 p5 가 리드 → p1(야당)이 K 로 넘어섬 → 프렌드 p2 차례
+    const state = playState({
+      declarer: 'p5',
+      friend: 'p2',
+      leader: 'p5',
+      trump: 'D',
+      trick: [
+        { player: 'p5', card: 'C03' },
+        { player: 'p1', card: 'C13' }, // 야당이 K 로 이기는 중 (점수카드)
+      ],
+      hands: {
+        p5: ['C04'],
+        p1: ['C02'],
+        p2: ['S14', 'C06'], // 마이티 보유, 클럽도 있다
+        p3: ['C09'],
+        p4: ['C10'],
+      },
+    });
+    expect(decide(state, 'p2').card).toBe('S14'); // 이제는 써야 한다
+  });
+});
