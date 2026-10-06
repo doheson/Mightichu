@@ -391,8 +391,10 @@ body {
   border-color: #c9a94f;
 }
 /* 그림은 크게, 이름은 작게 */
-.tcard--special .card__rank { font-size: 22px; line-height: 1; }
-.tcard--special.card--small .card__rank { font-size: 17px; }
+.tcard--special .card__rank { display: grid; place-items: center; line-height: 1; }
+.tcard__art { width: 26px; height: 26px; display: block; }
+.tcard.card--small .tcard__art { width: 19px; height: 19px; }
+.trickslot--combo .tcard--special.card--small .tcard__art { width: 15px; height: 15px; }
 .tcard .card__suit { font-size: 14px; letter-spacing: -0.02em; }
 .tcard.card--small .card__suit { font-size: 11px; }
 
