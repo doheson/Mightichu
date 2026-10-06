@@ -10,6 +10,7 @@
 | [docs/architecture.md](docs/architecture.md) | 프로젝트 설계 — 계약, 리댁션, 서버/DB, 구현 순서 |
 | [docs/rules-mighty.md](docs/rules-mighty.md) | 마이티 규칙 (pagat 표준 기준 + 변형 체크리스트) |
 | [docs/rules-tichu.md](docs/rules-tichu.md) | 티츄 규칙 (공식 룰북 기준) |
+| [docs/deploy.md](docs/deploy.md) | 배포 — Cloudflare Pages + Fly.io |
 
 ## 현재 상태
 

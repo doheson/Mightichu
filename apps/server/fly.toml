@@ -1,0 +1,47 @@
+# Fly.io 배포 설정.
+#
+# WebSocket 은 상시 연결이라 서버리스로 못 간다 — 실제 프로세스가 필요하다.
+# 도쿄(nrt)를 쓴다. 서울에서 35~40ms 인데 턴제라 체감 차이가 없다.
+#
+# ⚠️ **인스턴스는 하나로 둔다.** 방 상태가 메모리에 있고 SQLite 가 볼륨에 있어
+# 여러 대로 늘리면 방이 갈라지고 DB 가 충돌한다.
+# 늘려야 하면 Redis(방 공유) + Postgres(계정)로 먼저 옮겨야 한다.
+
+app = "mightichu"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3001"
+  DB_FILE = "/data/mightichu.db"
+
+# 계정·세션이 재배포에도 남아야 한다
+[mounts]
+  source = "mightichu_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  # 상시 연결이라 0 대로 줄이면 접속이 끊긴다
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 200
+    hard_limit = 400
+
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "3s"
+  grace_period = "10s"
+  method = "GET"
+  path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

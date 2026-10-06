@@ -48,7 +48,7 @@ const opts: AppOptions = typeof options === 'string' ? { origin: options } : opt
 const ORIGIN = opts.origin ?? '*';
 const BOT_STEP_MS = opts.botStepMs ?? 650;
 const TRICK_HOLD_MS = opts.trickHoldMs ?? 1500;
-const db = openDb(opts.dbFile ?? 'data/mightichu.db');
+const db = openDb(opts.dbFile ?? process.env['DB_FILE'] ?? 'data/mightichu.db');
 
 /**
  * 로그인한 소켓. **게스트는 여기에 없다** — 로그인은 선택이다.

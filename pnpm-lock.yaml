@@ -203,13 +203,13 @@ importers:
       socket.io:
         specifier: ^4.8.0
         version: 4.8.4
+      tsx:
+        specifier: ^4.20.0
+        version: 4.23.15
     devDependencies:
       socket.io-client:
         specifier: ^4.8.4
         version: 4.8.4
-      tsx:
-        specifier: ^4.20.0
-        version: 4.23.15
 
   apps/web:
     dependencies:
