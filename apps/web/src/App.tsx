@@ -227,6 +227,9 @@ function GameBoard(props: {
       view={props.view as MightyView}
       legal={props.legal as readonly MightyAction[]}
       send={props.send as (a: MightyAction) => void}
+      totals={props.totals}
+      history={props.history}
+      target={props.target}
     />
   );
 }

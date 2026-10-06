@@ -4,6 +4,7 @@ import { sortHand } from '@mightichu/mighty';
 import type { MightyAction, MightyView, RoundScore } from '../game/types.js';
 import { CardView } from './Card.js';
 import { Header, Log, Seats } from './Table.js';
+import { MatchScore, type TeamSpec } from './Scoreboard.js';
 import { useSeatName } from './names.js';
 import {
   BiddingPanel,
@@ -23,6 +24,9 @@ export interface BoardProps {
   /** 라운드가 끝났을 때 다음 판으로. 온라인에서는 방장만 활성화한다. */
   readonly onNext: (() => void) | null;
   readonly nextLabel: string;
+  readonly totals: Readonly<Record<string, number>>;
+  readonly history: readonly Readonly<Record<string, number>>[];
+  readonly target: number | null;
 }
 
 export function Board({
@@ -34,10 +38,37 @@ export function Board({
   send,
   onNext,
   nextLabel,
+  totals,
+  history,
+  target,
 }: BoardProps): React.JSX.Element {
+  const seatName = useSeatName();
+  /**
+   * 마이티는 **팀이 매 라운드 바뀐다**(프렌드가 그때그때 달라짐).
+   * 그래서 점수표를 팀이 아니라 **플레이어 단위**로 보여준다.
+   */
+  const players: TeamSpec[] = view.seats.map((seat) => ({
+    key: seat,
+    name: seatName(seat),
+    color: null,
+    seats: [seat],
+  }));
+
   return (
     <>
       <Header view={view} />
+
+      <div className="matchbar">
+        <span className="label">매치 누적</span>
+        <MatchScore
+          teams={players}
+          totals={totals}
+          history={history}
+          target={target}
+          teamed={false}
+          me={view.me}
+        />
+      </div>
       {error !== null ? <div className="error">{error}</div> : null}
 
       <div className="board">

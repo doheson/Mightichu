@@ -28,12 +28,15 @@ export function MatchScore({
   history,
   target,
   teamed,
+  me,
 }: {
   readonly teams: readonly TeamSpec[];
   readonly totals: Readonly<Record<string, number>>;
   readonly history: readonly Readonly<Record<string, number>>[];
   readonly target: number | null;
   readonly teamed: boolean;
+  /** 팀전이 아닐 때 요약에 띄울 좌석(보통 나). */
+  readonly me?: PlayerId;
 }): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const seatName = useSeatName();
@@ -52,14 +55,22 @@ export function MatchScore({
         onClick={() => setOpen((v) => !v)}
         title="눌러서 라운드별 점수 보기"
       >
-        {teams.map((t, i) => (
-          <span key={t.key}>
-            {i > 0 ? <span className="matchscore__vs">:</span> : null}
-            <span className={t.color === null ? '' : `team--${t.color}`}>
-              {value(t, totals)}
+        {/* 팀전이면 "N : M", 아니면(마이티 5인) 늘어놓으면 읽히지 않으므로 내 점수만 */}
+        {teamed ? (
+          teams.map((t, i) => (
+            <span key={t.key}>
+              {i > 0 ? <span className="matchscore__vs">:</span> : null}
+              <span className={t.color === null ? '' : `team--${t.color}`}>
+                {value(t, totals)}
+              </span>
             </span>
-          </span>
-        ))}
+          ))
+        ) : (
+          <>
+            <span className="matchscore__mine">{totals[me ?? ''] ?? 0}</span>
+            <span className="matchscore__target">내 점수</span>
+          </>
+        )}
         {target !== null ? <span className="matchscore__target">/ {target}</span> : null}
         <span className="matchscore__caret">{open ? '▴' : '▾'}</span>
       </button>

@@ -581,3 +581,7 @@ body {
 }
 .stack__count { font-size: 11px; opacity: 0.85; }
 .header__item--wide { grid-column: span 2; }
+
+/* 매치 점수 바 (마이티 — 팀이 매 라운드 바뀌어 헤더에 못 넣는다) */
+.matchbar { display: flex; align-items: center; gap: 8px; }
+.matchscore__mine { font-variant-numeric: tabular-nums; }
