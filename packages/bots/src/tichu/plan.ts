@@ -47,11 +47,12 @@ function overlaps(used: ReadonlySet<Card>, combo: Combo): boolean {
 }
 
 /**
- * 손패를 낼 단위로 분해한다.
- *
- * 폭탄은 깨지 않고 통째로 남긴다 — 쪼개면 가장 강한 수단을 잃는다.
+ * 한 가지 우선순위로 탐욕적으로 분해한다. `planHand` 가 여러 우선순위를 시도한다.
  */
-export function planHand(hand: readonly Card[]): HandPlan {
+function partitionWith(
+  hand: readonly Card[],
+  priority: (combo: Combo) => number,
+): HandPlan {
   const all = enumerateCombos(hand, null).filter(
     (c) => c.type !== 'DOG' && c.type !== 'SINGLE',
   );
@@ -70,7 +71,7 @@ export function planHand(hand: readonly Card[]): HandPlan {
   // 2. 나머지는 긴 것부터, 같은 길이면 낮은 끗부터
   for (const combo of all
     .filter((c) => !isBomb(c))
-    .sort((a, b) => lotPriority(b) - lotPriority(a))) {
+    .sort((a, b) => priority(b) - priority(a))) {
     if (overlaps(used, combo)) continue;
     lots.push(combo);
     for (const c of combo.cards) used.add(c);
@@ -92,6 +93,31 @@ export function planHand(hand: readonly Card[]): HandPlan {
     lotCount: bombs.length + lots.length + singles.length,
     control,
   };
+}
+
+/**
+ * 손패를 낼 단위로 분해한다.
+ *
+ * 탐욕적 분해는 **우선순위 하나에 갇힌다.** 긴 조합부터 가져가면 페어가 깨지고,
+ * 낮은 끗부터 가져가면 스트레이트를 놓친다. 그래서 **서로 다른 우선순위를 몇 개 돌려
+ * `lotCount` 가 가장 작은 분해를 택한다.** 완전 탐색은 아니지만 한 방향보다 확실히 낫다.
+ *
+ * 폭탄은 어느 경우든 깨지 않고 통째로 남긴다 — 쪼개면 가장 강한 수단을 잃는다.
+ */
+export function planHand(hand: readonly Card[]): HandPlan {
+  const strategies: ((combo: Combo) => number)[] = [
+    lotPriority, // 긴 것 우선, 같으면 낮은 끗
+    (c) => c.length * 100 + c.rank2, // 긴 것 우선, 같으면 높은 끗
+    (c) => (c.type === 'PAIR' || c.type === 'TRIPLE' ? 1000 : 0) + c.length * 10 - c.rank2 / 10, // 짝 우선
+    (c) => -c.rank2, // 낮은 끗부터 털기
+  ];
+
+  let best: HandPlan | null = null;
+  for (const strategy of strategies) {
+    const plan = partitionWith(hand, strategy);
+    if (best === null || plan.lotCount < best.lotCount) best = plan;
+  }
+  return best as HandPlan;
 }
 
 /**

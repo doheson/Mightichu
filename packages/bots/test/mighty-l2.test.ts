@@ -54,7 +54,7 @@ describe('공약이 현실적인가', () => {
   });
 
   it('평균 공약과 평균 획득이 거의 같다 — 과대·과소 공약이 아니다', () => {
-    // 측정: 평균 공약 14.20 vs 평균 획득 14.00, 중앙값 차이 0
+    // 측정: 평균 공약 13.39 vs 평균 획득 13.35
     expect(Math.abs(l2.avgBid - l2.avgGot)).toBeLessThan(1);
   });
 
@@ -64,5 +64,62 @@ describe('공약이 현실적인가', () => {
     expect(l2.declarerWins / l2.played).toBeGreaterThan(
       random.declarerWins / random.played,
     );
+  });
+});
+
+describe('판 읽기 — 공개 정보만으로', () => {
+  it('팔로우하지 않은 무늬를 보이드로 기록한다', async () => {
+    const { knownVoids } = await import('../src/mighty/read.js');
+    const view = {
+      me: 'p1',
+      contract: { trump: 'H', count: 14 },
+      jokerNomination: null,
+      currentTrick: [],
+      trickHistory: [
+        {
+          trickNo: 0,
+          plays: [
+            { player: 'p1', card: 'S13' },
+            { player: 'p2', card: 'S05' },
+            { player: 'p3', card: 'C02' }, // 스페이드 없음
+            { player: 'p4', card: 'H03' }, // 스페이드 없음
+            { player: 'p5', card: 'S07' },
+          ],
+          winner: 'p1',
+          points: 1,
+        },
+      ],
+    } as unknown as MightyView;
+
+    const voids = knownVoids(view);
+    expect([...(voids.get('p3') ?? [])]).toEqual(['S']);
+    expect([...(voids.get('p4') ?? [])]).toEqual(['S']);
+    expect(voids.get('p2')).toBeUndefined();
+  });
+
+  it('마이티·조커는 보이드 근거가 되지 않는다 — 아무 때나 낼 수 있다', async () => {
+    const { knownVoids } = await import('../src/mighty/read.js');
+    const view = {
+      me: 'p1',
+      contract: { trump: 'H', count: 14 },
+      jokerNomination: null,
+      currentTrick: [],
+      trickHistory: [
+        {
+          trickNo: 0,
+          plays: [
+            { player: 'p1', card: 'S13' },
+            { player: 'p2', card: 'S14' }, // 마이티 (기루다 하트 → ♠A)
+            { player: 'p3', card: 'JK' },  // 조커
+          ],
+          winner: 'p2',
+          points: 2,
+        },
+      ],
+    } as unknown as MightyView;
+
+    const voids = knownVoids(view);
+    expect(voids.get('p2')).toBeUndefined();
+    expect(voids.get('p3')).toBeUndefined();
   });
 });

@@ -102,6 +102,11 @@ export interface MightyState {
   readonly points: Readonly<Record<PlayerId, number>>;
   /** 이번 라운드에 이미 나온 카드 전부 (공개 정보). */
   readonly playedCards: readonly Card[];
+  /**
+   * 끝난 트릭 전부. 공개 정보다 — 누가 어느 무늬를 못 따라갔는지(보이드)를
+   * 여기서 읽어낼 수 있다. 봇의 추론에 쓴다.
+   */
+  readonly trickHistory: readonly CompletedTrick[];
   /** 방금 끝난 트릭 (표시 전용). */
   readonly lastTrick: CompletedTrick | null;
 
@@ -176,6 +181,8 @@ export interface MightyView {
    * 봇의 카운팅에 쓴다(어떤 높은 카드가 남았는지).
    */
   readonly playedCards: readonly Card[];
+  /** 끝난 트릭 전부 — 공개 정보. 보이드 추론에 쓴다. */
+  readonly trickHistory: readonly CompletedTrick[];
   /** 방금 끝난 트릭 — 전원 공개 정보다. */
   readonly lastTrick: CompletedTrick | null;
 

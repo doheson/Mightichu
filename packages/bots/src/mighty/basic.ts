@@ -10,6 +10,7 @@
  */
 
 import type { Bot, BotContext } from '@mightichu/core';
+import { knownAllies, likelyAlly, ruffRisk } from './read.js';
 import {
   JOKER,
   MIN_BID,
@@ -52,10 +53,18 @@ function estimateBid(hand: readonly Card[], trump: Trump): number {
     (c) => !isTrumpCard(c, trump) && !isJoker(c) && (rankOf(c) ?? 0) >= 13,
   ).length;
 
-  // 기준 상수는 **측정**으로 잡았다. 7 로 두면 평균 공약 15.18 vs 평균 획득 14.04 —
-  // 한 장씩 과대 공약이라 여당 성공률이 46% 로 손익분기 아래였다.
+  /**
+   * 기준 상수는 **측정**으로 잡는다. 수비가 세질수록 같은 손패로 딸 수 있는 점수가 줄어
+   * 이 값도 함께 내려가야 한다 — 실제로 두 번 내렸다.
+   *
+   * ```
+   * 7  성공률 46.0%  공약 15.18  획득 14.04   (초기)
+   * 6  성공률 57.2%  공약 14.20  획득 14.00   (공약 보정)
+   * 5  성공률 56.8%  공약 13.39  획득 13.35   (보이드·야당연대로 수비가 세진 뒤)  ← 현재
+   * ```
+   */
   const estimate =
-    6 +
+    5 +
     trumps.length * 1.1 +
     highTrumps * 0.4 +
     offSuitWinners * 0.8 +
@@ -214,9 +223,20 @@ export function createMightyBasicBot(): Bot<MightyView, MightyAction> {
            * 같은 무늬에서 나보다 센 카드가 전부 나갔다면 그 카드는 안전하다 —
            * 아껴둘 이유가 없고, 늦게 내면 기루다에 베인다.
            */
+          const allies = knownAllies(view);
+          /**
+           * 상대가 **보이드인 무늬는 리드하지 않는다.** 기루다로 잘라먹히면
+           * 그 트릭의 점수를 그대로 헌납한다. 공개 정보(누가 뭘 못 따라갔는지)로 안다.
+           */
+          const safeToLead = (card: Card): boolean => {
+            const suit = suitOf(card);
+            if (suit === null) return true;
+            return ruffRisk(suit, view, allies) === 0;
+          };
+
           const sureWinners = plays.filter((a) => {
             const card = a.type === 'PLAY_CARD' ? a.card : '';
-            return isTopOfSuit(card, view);
+            return isTopOfSuit(card, view) && safeToLead(card);
           });
           if (sureWinners.length > 0) {
             return [...sureWinners].sort((a, b) => {
@@ -225,17 +245,24 @@ export function createMightyBasicBot(): Bot<MightyView, MightyAction> {
               return keepValue(cb, trump) - keepValue(ca, trump);
             })[0] as MightyAction;
           }
-          // 아니면 아깝지 않은 카드부터 내보낸다 (마이티·조커는 아껴둔다)
+          // 아니면 아깝지 않은 카드부터. 단 잘라먹힐 무늬는 뒤로 민다.
           return [...plays].sort((a, b) => {
             const ca = a.type === 'PLAY_CARD' ? a.card : '';
             const cb = b.type === 'PLAY_CARD' ? b.card : '';
+            const ra = safeToLead(ca) ? 0 : 1000;
+            const rb = safeToLead(cb) ? 0 : 1000;
+            if (ra !== rb) return ra - rb;
             return keepValue(ca, trump) - keepValue(cb, trump);
           })[0] as MightyAction;
         }
 
         /**
-         * **팀 패는 밟지 않는다.** 마이티는 프렌드가 숨어 있어 아는 범위가 좁다 —
-         * 내가 주공이고 프렌드가 공개됐거나, 내가 프렌드이고 주공이 이기고 있을 때만 안다.
+         * **팀 패는 밟지 않는다.**
+         *
+         * 마이티는 프렌드가 숨어 있어 확실히 아는 범위가 좁다. 하지만 야당 입장에서
+         * 주공이 아닌 나머지 셋은 "프렌드 1 + 야당 2" 라 **2/3 확률로 같은 편**이다.
+         * 야당끼리 서로 잡아먹는 게 가장 큰 손해이므로, 주공이 이기는 게 아니라면
+         * 굳이 밟지 않는 쪽이 기대값상 낫다.
          */
         const lead = view.currentTrick[0];
         const bestSoFar = view.currentTrick.reduce<{ player: string; s: number } | null>(
@@ -245,10 +272,10 @@ export function createMightyBasicBot(): Bot<MightyView, MightyAction> {
           },
           null,
         );
-        const knownAlly =
-          view.declarer === view.me ? view.friend : view.iAmFriend ? view.declarer : null;
         const allyWinning =
-          lead !== undefined && knownAlly !== null && bestSoFar?.player === knownAlly;
+          lead !== undefined &&
+          bestSoFar !== null &&
+          likelyAlly(view, bestSoFar.player);
 
         const winners = plays.filter((a) => {
           const card = a.type === 'PLAY_CARD' ? a.card : '';

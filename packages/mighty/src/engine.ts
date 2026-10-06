@@ -213,6 +213,7 @@ function deal(ctx: InitContext<MightyConfig>): MightyState {
     jokerNomination: null,
     points,
     playedCards: [],
+    trickHistory: [],
     lastTrick: null,
     outcome: null,
   };
@@ -375,6 +376,7 @@ function finishTrick(state: MightyState): Applied<MightyState> {
   const next: MightyState = {
     ...state,
     lastTrick: completed,
+    trickHistory: [...state.trickHistory, completed],
     phase: done ? 'DONE' : 'PLAY',
     points,
     friend,
@@ -621,6 +623,7 @@ function buildView(state: MightyState, viewer: PlayerId): MightyView {
     jokerNomination: state.jokerNomination,
     points: state.points,
     playedCards: state.playedCards,
+    trickHistory: state.trickHistory,
     lastTrick: state.lastTrick,
     outcome: state.outcome,
   };

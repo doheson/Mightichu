@@ -226,12 +226,27 @@ export function createTichuBasicBot(): Bot<TichuView, TichuAction> {
          * 이미 나온 카드를 세어(카운팅) 내 카드가 최고라면 더 급할 때 쓴다.
          */
         const sorted = [...usable].sort((a, b) => comboCost(a.cards) - comboCost(b.cards));
-        const notTopCard = sorted.filter(
+
+        /**
+         * **용·봉황 타이밍.**
+         *
+         * 용은 +25점짜리이고 최강 싱글이지만, 먹으면 **트릭을 상대에게 넘겨야 한다**.
+         * 작은 트릭에 쓰면 25점을 그냥 상대에게 주는 꼴이다. 큰 트릭에서만 쓴다.
+         * 봉황은 −25점이라 내 트릭에 섞이면 손해다 — 상대가 먹을 트릭에 흘리거나
+         * 꼭 이겨야 할 때만 쓴다.
+         */
+        const isPremium = (a: Extract<TichuAction, { type: 'PLAY' }>): boolean =>
+          a.cards.includes(DRAGON) || a.cards.includes(PHOENIX);
+        const dragonWorthIt = trickPoints >= 15 || hand.length <= 3;
+        const cheap = sorted.filter((a) => !isPremium(a));
+        const afterPremium = dragonWorthIt || cheap.length === 0 ? sorted : cheap;
+
+        const notTopCard = afterPremium.filter(
           (a) =>
             a.cards.length !== 1 ||
             !isHighestLeft(a.cards[0] as Card, hand, view.playedCards),
         );
-        const pick = notTopCard.length > 0 && trickPoints < 20 ? notTopCard : sorted;
+        const pick = notTopCard.length > 0 && trickPoints < 20 ? notTopCard : afterPremium;
         return pick[0] as TichuAction;
       }
 
