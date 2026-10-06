@@ -24,9 +24,33 @@ export const PlayerTokenSchema = z.string().regex(/^[a-z0-9]{8,40}$/);
 /** 게임별 액션은 엔진이 검증한다. 여기서는 형태만 본다. */
 const ActionSchema = z.record(z.string(), z.unknown());
 
+export const EmailSchema = z.string().trim().toLowerCase().email().max(254);
+/**
+ * 비밀번호 최소 길이. 상한은 scrypt 비용 폭주를 막기 위한 것이다.
+ * 복잡도 규칙(대문자·특수문자)은 강제하지 않는다 — 길이가 훨씬 중요하다.
+ */
+export const PasswordSchema = z.string().min(8).max(200);
+export const SessionTokenSchema = z.string().regex(/^[a-f0-9]{48}$/);
+
 // ─────────────────────────────── 클라 → 서버
 
 export const ClientMessageSchema = z.discriminatedUnion('type', [
+  // ── 계정
+  z.object({
+    type: z.literal('REGISTER'),
+    email: EmailSchema,
+    password: PasswordSchema,
+    nickname: NicknameSchema,
+  }),
+  z.object({
+    type: z.literal('LOGIN'),
+    email: EmailSchema,
+    password: PasswordSchema,
+  }),
+  /** 저장해 둔 세션 토큰으로 바로 복귀. */
+  z.object({ type: z.literal('RESUME'), session: SessionTokenSchema }),
+  z.object({ type: z.literal('LOGOUT') }),
+
   z.object({
     type: z.literal('JOIN'),
     roomId: RoomIdSchema.optional(),
@@ -67,6 +91,15 @@ export interface RoomInfo {
 }
 
 export type ServerMessage =
+  | {
+      readonly type: 'AUTHED';
+      readonly userId: string;
+      readonly nickname: string;
+      /** 클라가 localStorage 에 보관한다. 로그아웃하면 서버에서 무효화된다. */
+      readonly session: string;
+    }
+  /** 로그아웃했거나 세션이 만료됨 — 게스트 상태로 돌아간다. */
+  | { readonly type: 'SIGNED_OUT' }
   | {
       readonly type: 'JOINED';
       readonly roomId: string;

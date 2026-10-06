@@ -39,6 +39,26 @@ Node 단일 스레드라 한 방 안의 액션은 자연히 직렬화된다 — 
 - 시작 **전** 연결이 끊기면 자리를 비우고, 시작 **후**엔 자리를 지킨다
 - 복귀 시 **전체 뷰 재전송** (델타 아님 — 단순함이 버그를 줄인다)
 
+## 계정 (SQLite)
+
+Node 25 **내장 `node:sqlite`** 를 쓴다 — 네이티브 빌드도 의존성도 없다.
+비밀번호는 `node:crypto` 의 scrypt + 솔트. 평문은 저장하지 않는다.
+
+```
+users        id, nickname, created_at
+credentials  user_id, provider, identifier, secret   PK(provider, identifier)
+sessions     token, user_id, expires_at
+```
+
+`credentials` 를 user 와 분리한 이유: **소셜 로그인은 행 하나 추가로 붙는다.**
+한 계정이 이메일 + 구글 + 애플을 동시에 가질 수 있어야 한다.
+
+- 없는 계정과 틀린 비밀번호의 **응답이 같다** — 어느 이메일이 가입돼 있는지 알려주지 않는다
+- **게스트는 계속 열려 있다.** 로그인은 닉네임 고정과 전적용이지 입장 조건이 아니다
+- 로그인하면 방에서 **계정 닉네임**을 쓴다 (입력값 무시)
+
+DB 파일은 `data/mightichu.db` (gitignore). 테스트는 `:memory:`.
+
 ## 영속성 (아직 미사용)
 
 결정론 덕분에 방 하나가 `{ seed, actions[] }` 몇 KB다 (`room.roundLog`).

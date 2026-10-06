@@ -7,30 +7,35 @@ import type { PlayerId } from '../game/types.js';
 export function JoinForm({
   connected,
   gameLabel,
+  fixedNickname,
   onJoin,
 }: {
   readonly connected: boolean;
   readonly gameLabel: string;
+  /** 로그인했으면 계정 닉네임으로 고정된다. */
+  readonly fixedNickname: string | null;
   readonly onJoin: (nickname: string, roomId?: string) => void;
 }): React.JSX.Element {
   const [nickname, setNickname] = useState('');
   const [code, setCode] = useState('');
-  const name = nickname.trim();
+  const name = fixedNickname ?? nickname.trim();
 
   return (
     <div className="panel">
       <p className="panel__hint">
         {connected ? `${gameLabel} — 방을 만들거나 코드로 입장하세요.` : '서버에 연결하는 중…'}
       </p>
-      <div className="panel__row">
-        <input
-          className="input"
-          placeholder="닉네임"
-          maxLength={12}
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-        />
-      </div>
+      {fixedNickname === null ? (
+        <div className="panel__row">
+          <input
+            className="input"
+            placeholder="닉네임"
+            maxLength={12}
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+          />
+        </div>
+      ) : null}
       <div className="panel__row">
         <button
           type="button"

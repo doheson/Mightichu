@@ -350,10 +350,23 @@ for (const [pid, sock] of room.sockets)     // ✅ 플레이어별 리댁션
 L1/L2 휴리스틱은 마이크로초라 같은 프로세스에서 돌려도 된다.
 L3 MCTS 를 넣으면 **이벤트 루프를 막으므로** 그때 `worker_threads` 로 옮긴다. 지금 할 일 아님.
 
-### 계정과 로그인 (예정)
+### 계정과 로그인 ✅ 구현됨
 
-1차는 게스트(닉네임)로 가고, 이후 **회원가입·로그인**을 넣는다.
-지금 구조가 그대로 받는다 — 바꿀 지점이 좁다.
+**이메일+비밀번호**로 시작하고 소셜은 나중에 붙인다. **게스트 플레이는 계속 열어둔다.**
+
+- DB 는 **SQLite** — Node 25 내장 `node:sqlite` 라 네이티브 빌드도 의존성도 없다
+- 비밀번호는 `node:crypto` 의 scrypt + 솔트. 평문은 어디에도 남기지 않는다
+- **없는 계정과 틀린 비밀번호의 응답이 같다** — 어느 이메일이 가입돼 있는지 알려주지 않는다
+- 소셜 확장: `credentials` 테이블이 `(provider, identifier)` 키라
+  한 계정에 수단을 여러 개 붙일 수 있다. 계정 모델을 다시 짤 필요가 없다
+
+```
+users        id, nickname, created_at
+credentials  user_id, provider('password'|'google'|…), identifier, secret, PK(provider, identifier)
+sessions     token, user_id, expires_at
+```
+
+재접속 신원과 인증 신원이 **같은 자리**에 들어간다 — 로그인하면 세션 토큰이 곧 좌석 복귀 토큰이다.
 
 현재: 클라가 익명 `token` 을 localStorage 에 보관 → 서버가 좌석 복귀에 쓴다.
 

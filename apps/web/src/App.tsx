@@ -7,6 +7,7 @@ import type { TichuAction, TichuView } from './game/tichuTypes.js';
 import { Board } from './ui/Board.js';
 import { TichuBoard } from './ui/tichu/TichuBoard.js';
 import { JoinForm, RoomPanel } from './ui/Lobby.js';
+import { AccountPanel } from './ui/Account.js';
 import { SeatNames } from './ui/names.js';
 
 type Mode = 'menu' | 'ai' | 'online';
@@ -139,10 +140,18 @@ function OnlineMode({ game }: { readonly game: GameId }): React.JSX.Element {
   if (room === null) {
     return (
       <>
+        <AccountPanel
+          account={state.account}
+          error={state.authError}
+          onRegister={online.register}
+          onLogIn={online.logIn}
+          onLogOut={online.logOut}
+        />
         {error !== null ? <div className="error">{error}</div> : null}
         <JoinForm
           connected={connected}
           gameLabel={GAMES[game].label}
+          fixedNickname={state.account?.nickname ?? null}
           onJoin={(nickname, roomId) => online.join(nickname, game, roomId)}
         />
       </>

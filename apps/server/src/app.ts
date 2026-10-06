@@ -18,6 +18,8 @@ import {
 import type { PlayerId } from '@mightichu/core';
 import { RoomRegistry } from './rooms.js';
 import type { Room } from './room.js';
+import { openDb, type Db } from './db/index.js';
+import { login, logout, register, resume, sweepSessions, type User } from './db/accounts.js';
 
 export interface AppOptions {
   readonly origin?: string;
@@ -28,12 +30,15 @@ export interface AppOptions {
   readonly botStepMs?: number;
   /** 트릭이 끝난 뒤 "누가 먹었는지" 를 보여주는 시간(ms). */
   readonly trickHoldMs?: number;
+  /** SQLite 파일 경로. 테스트는 ':memory:'. */
+  readonly dbFile?: string;
 }
 
 export interface AppHandle {
   readonly http: ReturnType<typeof createServer>;
   readonly io: Server;
   readonly registry: RoomRegistry;
+  readonly db: Db;
   close(): Promise<void>;
 }
 
@@ -43,6 +48,13 @@ const opts: AppOptions = typeof options === 'string' ? { origin: options } : opt
 const ORIGIN = opts.origin ?? '*';
 const BOT_STEP_MS = opts.botStepMs ?? 650;
 const TRICK_HOLD_MS = opts.trickHoldMs ?? 1500;
+const db = openDb(opts.dbFile ?? 'data/mightichu.db');
+
+/**
+ * 로그인한 소켓. **게스트는 여기에 없다** — 로그인은 선택이다.
+ * 로그인하면 닉네임이 계정 것으로 고정되고 전적이 쌓인다.
+ */
+const authed = new Map<string, { user: User; session: string }>();
 
 const registry = new RoomRegistry();
 const http = createServer((req, res) => {
@@ -136,6 +148,51 @@ io.on('connection', (socket) => {
     }
     const message = parsed.data;
 
+    // ── 계정. 방에 들어있지 않아도 처리한다.
+    if (message.type === 'REGISTER' || message.type === 'LOGIN') {
+      const result =
+        message.type === 'REGISTER'
+          ? register(db, message.email, message.password, message.nickname)
+          : login(db, message.email, message.password);
+      if ('code' in result) {
+        fail(socket, result.code, result.message);
+        return;
+      }
+      authed.set(socket.id, { user: result.user, session: result.token });
+      send(socket, {
+        type: 'AUTHED',
+        userId: result.user.id,
+        nickname: result.user.nickname,
+        session: result.token,
+      });
+      return;
+    }
+
+    if (message.type === 'RESUME') {
+      const user = resume(db, message.session);
+      if (user === null) {
+        // 만료·무효 — 조용히 게스트로 되돌린다
+        send(socket, { type: 'SIGNED_OUT' });
+        return;
+      }
+      authed.set(socket.id, { user, session: message.session });
+      send(socket, {
+        type: 'AUTHED',
+        userId: user.id,
+        nickname: user.nickname,
+        session: message.session,
+      });
+      return;
+    }
+
+    if (message.type === 'LOGOUT') {
+      const current = authed.get(socket.id);
+      if (current !== undefined) logout(db, current.session);
+      authed.delete(socket.id);
+      send(socket, { type: 'SIGNED_OUT' });
+      return;
+    }
+
     if (message.type === 'JOIN') {
       const room =
         message.roomId === undefined
@@ -145,8 +202,14 @@ io.on('connection', (socket) => {
         fail(socket, 'NO_ROOM', '그런 방이 없습니다.');
         return;
       }
-      const token = message.token ?? randomBytes(12).toString('hex');
-      const result = room.join(message.nickname, token, socket.id);
+      /**
+       * 로그인했으면 **계정 닉네임**을 쓴다 — 방마다 다른 이름으로 보이면 혼란스럽다.
+       * 게스트는 입력한 닉네임을 그대로 쓴다(게스트 플레이는 계속 열어둔다).
+       */
+      const account = authed.get(socket.id);
+      const nickname = account?.user.nickname ?? message.nickname;
+      const token = account?.session ?? message.token ?? randomBytes(12).toString('hex');
+      const result = room.join(nickname, token, socket.id);
       if ('code' in result) {
         fail(socket, result.code, result.message);
         return;
@@ -241,6 +304,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    authed.delete(socket.id);
     const room = registry.forSocket(socket.id);
     if (room === undefined) return;
     room.disconnect(socket.id);
@@ -248,17 +312,22 @@ io.on('connection', (socket) => {
   });
 });
 
-const sweeper = setInterval(() => registry.sweep(), 60_000);
+const sweeper = setInterval(() => {
+  registry.sweep();
+  sweepSessions(db);
+}, 60_000);
 sweeper.unref();
 
 return {
   http,
   io,
   registry,
+  db,
   async close(): Promise<void> {
     clearInterval(sweeper);
     await io.close();
     await new Promise<void>((resolve) => http.close(() => resolve()));
+    db.close();
   },
 };
 }

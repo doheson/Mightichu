@@ -14,6 +14,7 @@ import type { GameId } from './registry.js';
 
 const SERVER_URL = import.meta.env['VITE_SERVER_URL'] ?? 'http://localhost:3001';
 const TOKEN_KEY = 'mightichu.token';
+const SESSION_KEY = 'mightichu.session';
 const ROOM_KEY = 'mightichu.room';
 
 function readStorage(key: string): string | null {
@@ -31,8 +32,17 @@ function writeStorage(key: string, value: string): void {
   }
 }
 
+export interface Account {
+  readonly userId: string;
+  readonly nickname: string;
+}
+
 export interface OnlineState {
   readonly connected: boolean;
+  /** 로그인한 계정. null 이면 게스트 — 게스트 플레이는 계속 열려 있다. */
+  readonly account: Account | null;
+  /** 로그인·가입 과정의 오류만 따로 둔다(게임 오류와 섞이면 헷갈린다). */
+  readonly authError: string | null;
   readonly room: RoomInfo | null;
   readonly seat: PlayerId | null;
   readonly seq: number;
@@ -49,6 +59,8 @@ export interface OnlineState {
 const EMPTY: OnlineState = {
   game: 'mighty',
   connected: false,
+  account: null,
+  authError: null,
   room: null,
   seat: null,
   seq: 0,
@@ -63,6 +75,9 @@ const EMPTY: OnlineState = {
 
 export interface OnlineApi {
   readonly state: OnlineState;
+  register(email: string, password: string, nickname: string): void;
+  logIn(email: string, password: string): void;
+  logOut(): void;
   join(nickname: string, game: GameId, roomId?: string): void;
   addBot(): void;
   removeBot(seat: PlayerId): void;
@@ -80,7 +95,14 @@ export function useOnline(): OnlineApi {
     const socket = connect(SERVER_URL, { transports: ['websocket'] });
     socketRef.current = socket;
 
-    socket.on('connect', () => setState((s) => ({ ...s, connected: true, error: null })));
+    socket.on('connect', () => {
+      setState((s) => ({ ...s, connected: true, error: null }));
+      // 저장된 세션이 있으면 조용히 복귀한다
+      const session = readStorage(SESSION_KEY);
+      if (session !== null && session !== '') {
+        socket.emit(CHANNEL.client, { type: 'RESUME', session } satisfies ClientMessage);
+      }
+    });
     socket.on('disconnect', () => setState((s) => ({ ...s, connected: false })));
     socket.on('connect_error', () =>
       setState((s) => ({ ...s, connected: false, error: '서버에 연결할 수 없습니다.' })),
@@ -88,6 +110,18 @@ export function useOnline(): OnlineApi {
 
     socket.on(CHANNEL.server, (message: ServerMessage) => {
       switch (message.type) {
+        case 'AUTHED':
+          writeStorage(SESSION_KEY, message.session);
+          setState((s) => ({
+            ...s,
+            account: { userId: message.userId, nickname: message.nickname },
+            authError: null,
+          }));
+          break;
+        case 'SIGNED_OUT':
+          writeStorage(SESSION_KEY, '');
+          setState((s) => ({ ...s, account: null, authError: null }));
+          break;
         case 'JOINED':
           writeStorage(TOKEN_KEY, message.token);
           writeStorage(ROOM_KEY, message.roomId);
@@ -123,7 +157,12 @@ export function useOnline(): OnlineApi {
           }));
           break;
         case 'ERROR':
-          setState((s) => ({ ...s, error: message.message }));
+          // 계정 관련 오류는 로그인 폼 쪽에 띄운다
+          if (message.code === 'EMAIL_TAKEN' || message.code === 'BAD_CREDENTIALS') {
+            setState((s) => ({ ...s, authError: message.message }));
+          } else {
+            setState((s) => ({ ...s, error: message.message }));
+          }
           break;
       }
     });
@@ -155,6 +194,17 @@ export function useOnline(): OnlineApi {
 
   return {
     state,
+    register: useCallback(
+      (email: string, password: string, nickname: string) =>
+        emit({ type: 'REGISTER', email, password, nickname } as ClientMessage),
+      [emit],
+    ),
+    logIn: useCallback(
+      (email: string, password: string) =>
+        emit({ type: 'LOGIN', email, password } as ClientMessage),
+      [emit],
+    ),
+    logOut: useCallback(() => emit({ type: 'LOGOUT' }), [emit]),
     join,
     addBot: useCallback(() => emit({ type: 'ADD_BOT' }), [emit]),
     removeBot: useCallback((seat: PlayerId) => emit({ type: 'REMOVE_BOT', seat }), [emit]),

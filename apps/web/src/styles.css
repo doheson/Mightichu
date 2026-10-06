@@ -585,3 +585,9 @@ body {
 /* 매치 점수 바 (마이티 — 팀이 매 라운드 바뀌어 헤더에 못 넣는다) */
 .matchbar { display: flex; align-items: center; gap: 8px; }
 .matchscore__mine { font-variant-numeric: tabular-nums; }
+
+/* ── 계정 */
+.account { display: flex; align-items: center; gap: 8px; }
+.account__who { font-size: 13px; font-weight: 600; }
+.account__who--guest { color: var(--text-dim); font-weight: 400; }
+.account__form { gap: 8px; }

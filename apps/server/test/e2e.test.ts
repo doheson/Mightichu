@@ -17,7 +17,7 @@ let url: string;
 
 beforeAll(async () => {
   // 테스트에서는 봇 연출 지연을 끈다
-  app = createApp({ botStepMs: 0, trickHoldMs: 0 });
+  app = createApp({ botStepMs: 0, trickHoldMs: 0, dbFile: ':memory:' });
   await new Promise<void>((resolve) => app.http.listen(0, resolve));
   const address = app.http.address() as AddressInfo;
   url = `http://localhost:${address.port}`;
@@ -222,5 +222,84 @@ describe('재접속', () => {
     const after = await again.wait('VIEW');
     expect((after.view as MightyView).myHand).toEqual(hand);
     again.close();
+  });
+});
+
+describe('계정', () => {
+  /** 테스트용 값 — 실제 사용자 비밀번호가 아니다. */
+  const SECRET = 'test-only-passphrase-1';
+
+  it('가입하면 세션을 받는다', async () => {
+    const c = await client();
+    c.send({ type: 'REGISTER', email: 'a@example.com', password: SECRET, nickname: '가입자' });
+    const authed = await c.wait('AUTHED');
+    expect(authed.nickname).toBe('가입자');
+    expect(authed.session).toMatch(/^[a-f0-9]{48}$/);
+    c.close();
+  });
+
+  it('세션으로 복귀한다', async () => {
+    const first = await client();
+    first.send({ type: 'REGISTER', email: 'b@example.com', password: SECRET, nickname: '복귀자' });
+    const authed = await first.wait('AUTHED');
+    first.close();
+
+    const again = await client();
+    again.send({ type: 'RESUME', session: authed.session });
+    expect((await again.wait('AUTHED')).nickname).toBe('복귀자');
+    again.close();
+  });
+
+  it('로그아웃하면 그 세션이 죽는다', async () => {
+    const c = await client();
+    c.send({ type: 'REGISTER', email: 'c@example.com', password: SECRET, nickname: '나감' });
+    const authed = await c.wait('AUTHED');
+    c.send({ type: 'LOGOUT' });
+    await c.wait('SIGNED_OUT');
+    c.close();
+
+    const again = await client();
+    again.send({ type: 'RESUME', session: authed.session });
+    await again.wait('SIGNED_OUT');
+    again.close();
+  });
+
+  it('틀린 비밀번호는 거부한다', async () => {
+    const c = await client();
+    c.send({ type: 'REGISTER', email: 'd@example.com', password: SECRET, nickname: '디' });
+    await c.wait('AUTHED');
+    const other = await client();
+    other.send({ type: 'LOGIN', email: 'd@example.com', password: 'wrong-value-x' });
+    expect((await other.wait('ERROR')).code).toBe('BAD_CREDENTIALS');
+    c.close();
+    other.close();
+  });
+
+  it('짧은 비밀번호는 스키마에서 걸러진다', async () => {
+    const c = await client();
+    c.socket.emit(CHANNEL.client, { type: 'REGISTER', email: 'e@example.com', password: 'short', nickname: '이' });
+    expect((await c.wait('ERROR')).code).toBe('BAD_MESSAGE');
+    c.close();
+  });
+
+  it('로그인하면 방에서 계정 닉네임을 쓴다 — 입력값을 무시한다', async () => {
+    const c = await client();
+    c.send({ type: 'REGISTER', email: 'f@example.com', password: SECRET, nickname: '진짜이름' });
+    await c.wait('AUTHED');
+    c.send({ type: 'JOIN', nickname: '아무이름', game: 'mighty' });
+    await c.wait('JOINED');
+    const room = await c.wait('ROOM');
+    expect(room.room.members[0]?.nickname).toBe('진짜이름');
+    c.close();
+  });
+
+  it('게스트는 로그인 없이 그대로 들어간다', async () => {
+    const c = await client();
+    c.send({ type: 'JOIN', nickname: '게스트', game: 'mighty' });
+    const joined = await c.wait('JOINED');
+    expect(joined.seat).toBe('p1');
+    const room = await c.wait('ROOM');
+    expect(room.room.members[0]?.nickname).toBe('게스트');
+    c.close();
   });
 });
