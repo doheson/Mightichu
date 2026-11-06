@@ -183,9 +183,19 @@ export function Tally(): React.JSX.Element {
   const undo = (): void =>
     setState((prev) => ({ ...prev, rounds: prev.rounds.slice(0, -1) }));
 
-  const reset = (): void => {
-    if (!confirm('기록을 전부 지울까요? 되돌릴 수 없습니다.')) return;
-    setState((prev) => ({ ...prev, rounds: [], started: false }));
+  /** 같은 멤버로 새 게임 — 이름은 그대로 두고 점수만 비운다. 이쪽이 훨씬 흔하다. */
+  const resetScores = (): void => {
+    if (state.rounds.length === 0) return;
+    if (!confirm(`${state.rounds.length}판 기록을 지우고 0점부터 다시 시작할까요?\n이름은 그대로 남습니다.`)) {
+      return;
+    }
+    setState((prev) => ({ ...prev, rounds: [] }));
+  };
+
+  /** 멤버가 바뀌었을 때 — 이름까지 지우고 처음 화면으로. */
+  const resetAll = (): void => {
+    if (!confirm('이름과 기록을 모두 지우고 처음부터 시작할까요?\n되돌릴 수 없습니다.')) return;
+    setState({ names: DEFAULT_NAMES, rounds: [], base: DEFAULT_BASE, started: false });
   };
 
   const leader = [...SEATS].sort((a, b) => (totals[b] ?? 0) - (totals[a] ?? 0))[0];
@@ -294,11 +304,14 @@ export function Tally(): React.JSX.Element {
             <button type="button" className="btn btn--ghost btn--tiny" onClick={undo}>
               마지막 판 취소
             </button>
-            <button type="button" className="btn btn--ghost btn--tiny" onClick={reset}>
-              전체 초기화
+            <button type="button" className="btn btn--ghost btn--tiny" onClick={resetScores}>
+              점수 리셋
             </button>
           </>
         ) : null}
+        <button type="button" className="btn btn--ghost btn--tiny" onClick={resetAll}>
+          전체 리셋
+        </button>
       </div>
 
       {editingNames ? (
