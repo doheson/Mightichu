@@ -1,64 +1,116 @@
+/**
+ * 색은 카드게임의 재료에서 가져온다 — **펠트 그린 / 골드 / 아이보리 / 잉크**.
+ * 중성 회색으로만 짜면 아무 앱이나 될 수 있는 화면이 된다.
+ *
+ * 팀 색(파랑·빨강)은 의미를 가진 색이라 강조색과 겹치면 안 된다.
+ * 그래서 강조색을 파랑이 아니라 **골드**로 둔다.
+ */
 :root {
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --surface-2: #eef0f4;
-  --border: #d8dce4;
-  --text: #171a1f;
-  --text-dim: #666d7a;
-  --accent: #2f6fed;
-  --accent-text: #ffffff;
-  --danger: #c7372f;
-  --pos: #1a7f4b;
-  --neg: #c7372f;
+  color-scheme: light dark;
+
+  --bg: #efe9dc;
+  --bg-tint: 15 23 42;
+  --surface: #fffdf8;
+  --surface-2: #f2ece0;
+  --border: #ddd3c0;
+  --text: #1b1a17;
+  --text-dim: #6d675c;
+
+  --accent: #a9761a;
+  --accent-text: #fffdf8;
+  --accent-soft: rgb(169 118 26 / 0.12);
+
+  --danger: #b8372c;
+  --pos: #1a7a4e;
+  --neg: #b8372c;
+
   --felt: #1f6b4a;
-  --card-face: #ffffff;
-  --card-red: #c7372f;
-  --radius: 10px;
+  --felt-deep: #11462f;
+  --card-face: #fffdf8;
+  --card-red: #b8372c;
+  --gold: #c9a227;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.06), 0 2px 8px rgb(0 0 0 / 0.05);
+  --shadow-2: 0 2px 6px rgb(0 0 0 / 0.1), 0 12px 28px rgb(0 0 0 / 0.1);
+  --ring: 0 0 0 2px var(--accent-soft);
 }
 
+/* 어두운 쪽이 기본값에 가깝다 — 카드가 빛나 보이려면 바탕이 깊어야 한다. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #14161a;
-    --surface: #1c1f25;
-    --surface-2: #23272f;
-    --border: #333841;
-    --text: #e8eaee;
-    --text-dim: #99a1ae;
-    --accent: #5b8ef5;
-    --danger: #e4635a;
-    --pos: #46c483;
-    --neg: #e4635a;
-    --felt: #18503a;
-    --card-face: #f2f3f5;
-    --card-red: #c7372f;
+    --bg: #0e1014;
+    --surface: #171a21;
+    --surface-2: #1f232c;
+    --border: #2c323d;
+    --text: #edeff3;
+    --text-dim: #8e97a6;
+
+    --accent: #d9a441;
+    --accent-text: #241a05;
+    --accent-soft: rgb(217 164 65 / 0.16);
+
+    --danger: #ef6b63;
+    --pos: #4ec98a;
+    --neg: #ef6b63;
+
+    --felt: #14593f;
+    --felt-deep: #0a3526;
+    --card-face: #f7f4ec;
+    --card-red: #c0392b;
+    --gold: #e0bc5a;
+
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 10px rgb(0 0 0 / 0.3);
+    --shadow-2: 0 4px 10px rgb(0 0 0 / 0.45), 0 18px 40px rgb(0 0 0 / 0.4);
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: #14161a;
-  --surface: #1c1f25;
-  --surface-2: #23272f;
-  --border: #333841;
-  --text: #e8eaee;
-  --text-dim: #99a1ae;
-  --accent: #5b8ef5;
-  --danger: #e4635a;
-  --pos: #46c483;
-  --neg: #e4635a;
-  --felt: #18503a;
-  --card-face: #f2f3f5;
+  --bg: #0e1014;
+  --surface: #171a21;
+  --surface-2: #1f232c;
+  --border: #2c323d;
+  --text: #edeff3;
+  --text-dim: #8e97a6;
+  --accent: #d9a441;
+  --accent-text: #241a05;
+  --accent-soft: rgb(217 164 65 / 0.16);
+  --danger: #ef6b63;
+  --pos: #4ec98a;
+  --neg: #ef6b63;
+  --felt: #14593f;
+  --felt-deep: #0a3526;
+  --card-face: #f7f4ec;
+  --card-red: #c0392b;
+  --gold: #e0bc5a;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 10px rgb(0 0 0 / 0.3);
+  --shadow-2: 0 4px 10px rgb(0 0 0 / 0.45), 0 18px 40px rgb(0 0 0 / 0.4);
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard',
+  font-family: 'Gothic A1', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
     system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.5;
+  /* 평평한 단색 대신 아주 옅은 광원 — 카드와 펠트가 떠 보인다 */
+  background:
+    radial-gradient(1200px 600px at 50% -10%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 숫자는 어디서나 자리를 지킨다 — 점수가 흔들리면 싸구려로 보인다 */
+.scores, .tallycard__score, .matchscore, .versus, .board__cell,
+.pointpad__cell, .preview__cell, .seat__points {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
 .app {
@@ -74,20 +126,37 @@ body {
 
 /* ── 상단 */
 .topbar { display: flex; align-items: baseline; gap: 10px; }
-.title { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+.title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 55%, var(--text)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 .subtitle { color: var(--text-dim); font-size: 13px; margin-right: auto; }
 
 .header {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 8px;
-  background: var(--surface);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--text) 3%, var(--surface)), var(--surface) 42%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px 12px;
+  padding: 11px 13px;
+  box-shadow: var(--shadow-1);
 }
 .header__item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+.label {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
 .header__item strong { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .error {
@@ -108,10 +177,26 @@ body {
   min-height: 300px;
   margin: 0 auto;
   border-radius: var(--radius);
+  /* 가운데가 밝은 펠트 — 평평한 초록은 종이처럼 보인다 */
   background:
-    linear-gradient(180deg, color-mix(in srgb, #fff 5%, var(--felt)), var(--felt) 60%);
-  border: 1px solid color-mix(in srgb, #000 35%, var(--felt));
-  box-shadow: inset 0 0 32px rgb(0 0 0 / 0.3);
+    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, #fff 9%, var(--felt)), var(--felt) 55%, var(--felt-deep) 100%);
+  border: 1px solid color-mix(in srgb, #000 45%, var(--felt));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent),
+    inset 0 0 44px rgb(0 0 0 / 0.34),
+    var(--shadow-2);
+}
+
+/* 펠트 한가운데 아주 옅은 무늬 — 빈 초록이 덜 허전해진다 */
+.table::before {
+  content: '♠ ♥ ♦ ♣';
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(18px, 4vw, 30px);
+  letter-spacing: 0.3em;
+  color: color-mix(in srgb, #fff 5%, transparent);
+  pointer-events: none;
+  user-select: none;
 }
 
 .table__center {
@@ -132,9 +217,11 @@ body {
   position: absolute;
   transform: translate(-50%, -50%);
   width: 94px;
-  background: color-mix(in srgb, #000 34%, transparent);
-  border: 1px solid color-mix(in srgb, #fff 16%, transparent);
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.34), rgb(0 0 0 / 0.46));
+  border: 1px solid color-mix(in srgb, #fff 18%, transparent);
   border-radius: 10px;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.35);
+  backdrop-filter: blur(2px);
   padding: 6px 4px;
   display: flex;
   flex-direction: column;
@@ -176,8 +263,9 @@ body {
 .card-back {
   display: inline-grid; place-items: center;
   width: 20px; height: 26px; border-radius: 3px;
-  background: linear-gradient(135deg, #3b5bdb, #1f3d9e);
-  color: #fff; font-size: 10px; font-weight: 700;
+  background: linear-gradient(135deg, #8d2f2a, #5c1b18);
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+  color: #f7e6c8; font-size: 10px; font-weight: 700;
 }
 
 /* ── 본문 */
@@ -186,13 +274,15 @@ body {
 .main__left { min-width: 0; }
 
 .panel {
-  background: var(--surface);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--text) 3%, var(--surface)), var(--surface) 42%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px;
+  padding: 13px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: var(--shadow-1);
 }
 .panel__hint { margin: 0; color: var(--text-dim); font-size: 13px; }
 .panel__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -208,27 +298,41 @@ body {
 
 .card {
   position: relative;
-  width: 44px; height: 62px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--card-face);
-  color: #171a1f;
+  width: 46px; height: 64px;
+  border-radius: 7px;
+  border: 1px solid rgb(0 0 0 / 0.18);
+  background: linear-gradient(160deg, #fff, var(--card-face) 55%, color-mix(in srgb, #000 5%, var(--card-face)));
+  color: #1b1a17;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 0;
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   padding: 0;
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25), inset 0 1px 0 rgb(255 255 255 / 0.9);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, outline-color 0.1s ease;
 }
 .card--small { width: 34px; height: 48px; }
 .card--red { color: var(--card-red); }
 .card--clickable { cursor: pointer; }
-.card--clickable:hover { transform: translateY(-4px); box-shadow: 0 4px 10px rgb(0 0 0 / 0.2); }
-.card--disabled { opacity: 0.32; cursor: default; }
+.card--clickable:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 18px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+/*
+ * 비활성 카드도 **카드로는 보여야** 한다. 0.3 까지 내리면 회색 조각이 된다.
+ * 채도만 빼고 밝기는 남긴다 — 낼 수 있는 카드와 구분은 되면서 손패는 읽힌다.
+ */
+.card--disabled {
+  opacity: 0.62;
+  filter: saturate(0.5);
+  cursor: default;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+}
 .card--selected {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-  transform: translateY(-6px);
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  transform: translateY(-7px);
+  box-shadow: 0 10px 22px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.9);
 }
 .card__rank { font-size: 15px; font-weight: 700; line-height: 1.1; }
 .card--small .card__rank { font-size: 12px; }
@@ -238,19 +342,31 @@ body {
 /* ── 컨트롤 */
 .btn {
   border: 1px solid var(--border);
-  background: var(--surface-2);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, var(--surface-2)), var(--surface-2));
   color: var(--text);
-  border-radius: 8px;
-  padding: 7px 13px;
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
+  box-shadow: var(--shadow-1);
+  transition: transform 0.08s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
-.btn:hover:not(:disabled) { border-color: var(--accent); }
-.btn:disabled { opacity: 0.45; cursor: default; }
-.btn--primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.btn--danger { background: var(--danger); border-color: var(--danger); color: #fff; }
-.btn--ghost { background: transparent; }
+.btn:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn:focus-visible { outline: none; box-shadow: var(--ring), var(--shadow-1); }
+.btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+.btn--primary {
+  background: linear-gradient(180deg, color-mix(in srgb, #fff 18%, var(--accent)), var(--accent));
+  border-color: color-mix(in srgb, #000 15%, var(--accent));
+  color: var(--accent-text);
+}
+.btn--danger {
+  background: linear-gradient(180deg, color-mix(in srgb, #fff 14%, var(--danger)), var(--danger));
+  border-color: var(--danger); color: #fff;
+}
+.btn--ghost { background: transparent; box-shadow: none; font-weight: 600; }
 
 .chips { display: flex; gap: 6px; }
 .chips--wrap { flex-wrap: wrap; }
@@ -259,21 +375,31 @@ body {
   background: var(--surface-2);
   color: var(--text);
   border-radius: 999px;
-  padding: 5px 12px;
+  padding: 6px 13px;
   font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
-.chip:hover { border-color: var(--accent); }
-.chip--on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+.chip--on {
+  background: linear-gradient(180deg, color-mix(in srgb, #fff 16%, var(--accent)), var(--accent));
+  border-color: color-mix(in srgb, #000 15%, var(--accent));
+  color: var(--accent-text);
+}
 
 .select {
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
-  border-radius: 8px;
-  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  padding: 7px 11px;
   font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
 }
+.select:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
 
 /* ── 로그 */
 .log {
@@ -290,10 +416,12 @@ body {
 
 /* ── 내 손패 */
 .myhand {
-  background: var(--surface);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--text) 3%, var(--surface)), var(--surface) 45%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px;
+  padding: 13px;
+  box-shadow: var(--shadow-1);
 }
 .myhand__title { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 
@@ -318,12 +446,15 @@ body {
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
-  border-radius: 8px;
-  padding: 7px 11px;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
   font-size: 14px;
+  font-family: inherit;
   min-width: 0;
   flex: 1 1 140px;
 }
+.input::placeholder { color: color-mix(in srgb, var(--text-dim) 70%, transparent); }
+.input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
 .input--code {
   flex: 0 0 110px;
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
@@ -439,7 +570,15 @@ body {
   border-radius: var(--radius);
   cursor: pointer;
 }
-.gamecard--on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.gamecard {
+  box-shadow: var(--shadow-1);
+  transition: transform 0.1s ease, border-color 0.12s ease;
+}
+.gamecard:hover { transform: translateY(-2px); border-color: var(--accent); }
+.gamecard--on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset, 0 0 20px color-mix(in srgb, var(--accent) 20%, transparent);
+}
 .gamecard__name { font-size: 15px; font-weight: 700; }
 .gamecard__sub { font-size: 12px; color: var(--text-dim); }
 
@@ -523,10 +662,14 @@ body {
 }
 
 /* 게임판을 더 길게 */
-.table { aspect-ratio: 16 / 12; max-height: 560px; min-height: 340px; }
-.table--tichu { aspect-ratio: 16 / 12; }
+/*
+ * 판은 손패·조작부와 **한 화면에 같이** 보여야 한다.
+ * 크게 키우면 멋있어 보이지만 매번 스크롤해야 해서 실제로는 불편하다.
+ */
+.table { aspect-ratio: 16 / 9.5; max-height: 400px; min-height: 280px; }
+.table--tichu { aspect-ratio: 16 / 9.5; }
 @media (max-width: 680px) {
-  .table, .table--tichu { aspect-ratio: 4 / 5; max-height: 460px; }
+  .table, .table--tichu { aspect-ratio: 1 / 1; max-height: 340px; min-height: 260px; }
 }
 
 /* 로그가 사라졌으니 본문은 한 줄로 */
@@ -578,8 +721,10 @@ body {
   position: absolute; top: 0;
   width: 10px; height: 16px;
   border-radius: 2px;
-  background: linear-gradient(135deg, #4a6ae0, #2a47a8);
-  border: 1px solid color-mix(in srgb, #000 35%, transparent);
+  /* 카드 뒷면 — 진홍에 금테. 파란 막대는 펠트/골드 톤에서 겉돈다 */
+  background: linear-gradient(135deg, #8d2f2a, #5c1b18);
+  border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
 }
 .stack__count { font-size: 11px; opacity: 0.85; }
 .header__item--wide { grid-column: span 2; }
@@ -607,18 +752,23 @@ body {
 }
 .tallycard {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 10px 6px;
-  background: var(--surface);
+  padding: 12px 6px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, var(--surface)), var(--surface) 45%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   min-width: 0;
+  box-shadow: var(--shadow-1);
 }
-.tallycard--lead { border-color: #ffd964; box-shadow: 0 0 0 1px #ffd964 inset; }
+.tallycard--lead {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold) inset, 0 0 18px color-mix(in srgb, var(--gold) 28%, transparent);
+}
 .tallycard__name {
   font-size: 12px; color: var(--text-dim);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
 }
-.tallycard__score { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.tallycard__score { font-size: 25px; font-weight: 900; letter-spacing: -0.02em; }
 
 .tally__names { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 @media (max-width: 560px) { .tally__names { grid-template-columns: repeat(2, 1fr); } }
