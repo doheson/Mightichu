@@ -716,3 +716,12 @@ body {
 }
 .board__head { display: flex; justify-content: flex-end; }
 .board__headnote { font-size: 9.5px; color: var(--text-dim); letter-spacing: 0.03em; }
+
+/* 이름 입력 시작 화면 */
+.tally__setup { display: flex; flex-direction: column; gap: 6px; }
+.tally__setupRow { display: flex; align-items: center; gap: 8px; }
+.tally__seatNo {
+  flex: 0 0 22px; text-align: center;
+  font-size: 12px; color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}

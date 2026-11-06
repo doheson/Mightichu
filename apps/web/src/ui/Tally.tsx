@@ -55,26 +55,32 @@ interface TallyState {
   readonly rounds: readonly Round[];
   /** 점수 공식의 기준선. 모임마다 최저 공약이 달라 열어둔다. */
   readonly base: number;
+  /** 이름을 넣고 시작했는가. 처음엔 이름 입력 화면부터 보여준다. */
+  readonly started: boolean;
 }
 
-const DEFAULT_NAMES = ['1번', '2번', '3번', '4번', '5번'];
+/** 시작 화면에서 직접 입력한다. 빈칸이면 자리 번호로 대신 부른다. */
+const DEFAULT_NAMES = ['', '', '', '', ''];
+const SEAT_PLACEHOLDER = ['1번', '2번', '3번', '4번', '5번'];
 const SEATS = Array.from({ length: PLAYER_COUNT }, (_, i) => `p${i + 1}`);
 
 function load(): TallyState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === null) return { names: DEFAULT_NAMES, rounds: [], base: DEFAULT_BASE };
+    if (raw === null) return { names: DEFAULT_NAMES, rounds: [], base: DEFAULT_BASE, started: false };
     const parsed = JSON.parse(raw) as TallyState;
     if (!Array.isArray(parsed.names) || parsed.names.length !== PLAYER_COUNT) {
-      return { names: DEFAULT_NAMES, rounds: [], base: DEFAULT_BASE };
+      return { names: DEFAULT_NAMES, rounds: [], base: DEFAULT_BASE, started: false };
     }
     return {
       names: parsed.names,
       rounds: parsed.rounds ?? [],
       base: parsed.base ?? DEFAULT_BASE,
+      // 예전 저장본에는 started 가 없다 — 기록이 있으면 이미 시작한 것으로 본다
+      started: parsed.started ?? (parsed.rounds ?? []).length > 0,
     };
   } catch {
-    return { names: DEFAULT_NAMES, rounds: [], base: DEFAULT_BASE };
+    return { names: DEFAULT_NAMES, rounds: [], base: DEFAULT_BASE, started: false };
   }
 }
 
@@ -135,7 +141,11 @@ export function Tally(): React.JSX.Element {
   }, [state]);
 
   const nameOf = useCallback(
-    (seat: string) => state.names[SEATS.indexOf(seat)] ?? seat,
+    (seat: string) => {
+      const i = SEATS.indexOf(seat);
+      const name = (state.names[i] ?? '').trim();
+      return name !== '' ? name : (SEAT_PLACEHOLDER[i] ?? seat);
+    },
     [state.names],
   );
 
@@ -175,10 +185,79 @@ export function Tally(): React.JSX.Element {
 
   const reset = (): void => {
     if (!confirm('기록을 전부 지울까요? 되돌릴 수 없습니다.')) return;
-    setState((prev) => ({ ...prev, rounds: [] }));
+    setState((prev) => ({ ...prev, rounds: [], started: false }));
   };
 
   const leader = [...SEATS].sort((a, b) => (totals[b] ?? 0) - (totals[a] ?? 0))[0];
+
+  const setName = (i: number, value: string): void =>
+    setState((prev) => ({
+      ...prev,
+      names: prev.names.map((n, j) => (j === i ? value : n)),
+    }));
+
+  /** 처음엔 이름부터 받는다. 판에서 "3번" 보다 이름이 훨씬 잘 읽힌다. */
+  if (!state.started) {
+    const filled = state.names.filter((n) => n.trim() !== '').length;
+    return (
+      <div className="panel">
+        <p className="panel__hint">
+          둘러앉은 순서대로 <strong>5명의 이름</strong>을 넣어주세요.
+          비워두면 자리 번호로 부릅니다.
+        </p>
+        <div className="tally__setup">
+          {SEATS.map((seat, i) => (
+            <label key={seat} className="tally__setupRow">
+              <span className="tally__seatNo">{i + 1}</span>
+              <input
+                className="input"
+                maxLength={8}
+                placeholder={SEAT_PLACEHOLDER[i]}
+                value={state.names[i] ?? ''}
+                onChange={(e) => setName(i, e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return;
+                  const inputs = [
+                    ...document.querySelectorAll<HTMLInputElement>('.tally__setup input'),
+                  ];
+                  (inputs[i + 1] ?? inputs[i])?.focus();
+                }}
+              />
+            </label>
+          ))}
+        </div>
+
+        <div className="panel__row">
+          <span className="label">점수 기준선</span>
+          <select
+            className="select"
+            value={state.base}
+            onChange={(e) => setState((prev) => ({ ...prev, base: Number(e.target.value) }))}
+          >
+            {[11, 12, 13, 14].map((b) => (
+              <option key={b} value={b}>
+                {b} (최저 공약)
+              </option>
+            ))}
+          </select>
+          <span className="panel__count">
+            S = 2×(공약 − {state.base}) + (획득 − 공약)
+          </span>
+        </div>
+
+        <div className="panel__row">
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => setState((prev) => ({ ...prev, started: true }))}
+          >
+            시작하기
+          </button>
+          <span className="panel__count">{filled} / 5명 입력됨</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -251,12 +330,8 @@ export function Tally(): React.JSX.Element {
                 className="input"
                 maxLength={8}
                 value={state.names[i] ?? ''}
-                onChange={(e) =>
-                  setState((prev) => ({
-                    ...prev,
-                    names: prev.names.map((n, j) => (j === i ? e.target.value : n)),
-                  }))
-                }
+                placeholder={SEAT_PLACEHOLDER[i]}
+                onChange={(e) => setName(i, e.target.value)}
               />
             ))}
           </div>
