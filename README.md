@@ -27,7 +27,7 @@ pnpm --filter @mightichu/server dev     # http://localhost:3001  (온라인 모�
 | `packages/mighty` | ✅ 룰 엔진 전체 (비딜·비딩·바닥·프렌드·10트릭·점수) |
 | `packages/tichu` | ✅ 룰 엔진 전체 (조합·봉황 와일드·폭탄·소원·용 양도·더블윈) |
 | `packages/bots` | ✅ L1 랜덤 + L1.5 기본 봇 (제대로 된 L2 는 5단계) |
-| `apps/web` | ✅ AI 모드(Web Worker) + 온라인 모드(Socket.IO) |
+| `apps/web` | ✅ AI 모드(Web Worker) + 온라인 모드(Socket.IO) + 오프라인 점수판 |
 | `packages/protocol` | ✅ zod 스키마 — 서버·클라 공용 |
 | `apps/server` | ✅ Socket.IO, 인메모리 방, 재접속, 봇 채우기 |
 

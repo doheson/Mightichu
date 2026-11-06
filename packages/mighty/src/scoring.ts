@@ -35,6 +35,14 @@ export interface ScoringInput {
   readonly contract: Bid;
   /** 여당(주공+프렌드)이 획득한 점수카드 수. 주공이 버린 3장의 점수 포함. */
   readonly declarerPoints: number;
+  /**
+   * 점수 공식의 기준선. 생략하면 `MIN_BID`(13).
+   *
+   * `S = 2×(공약 − 기준) + (획득 − 공약)` 에서의 기준이다. 보통 최저 공약과 같다.
+   * 실물 비딩판이 11부터 시작하는 등 최저 공약을 달리 쓰는 모임이 있어 열어둔다 —
+   * 기준을 안 맞추면 공약 11~12 에서 성공했는데 점수가 음수가 된다.
+   */
+  readonly base?: number;
 }
 
 export type ScoringDetail = {
@@ -57,8 +65,9 @@ export function computeScore(input: ScoringInput): RoundScore {
   const defenderPoints = TOTAL_POINTS - declarerPoints;
   const won = declarerPoints >= contract.count;
 
+  const base = input.base ?? MIN_BID;
   const baseScore = won
-    ? 2 * (contract.count - MIN_BID) + (declarerPoints - contract.count)
+    ? 2 * (contract.count - base) + (declarerPoints - contract.count)
     : contract.count - declarerPoints;
 
   const multipliers: string[] = [];

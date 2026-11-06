@@ -9,8 +9,9 @@ import { TichuBoard } from './ui/tichu/TichuBoard.js';
 import { JoinForm, RoomPanel } from './ui/Lobby.js';
 import { AccountPanel } from './ui/Account.js';
 import { SeatNames } from './ui/names.js';
+import { Tally } from './ui/Tally.js';
 
-type Mode = 'menu' | 'ai' | 'online';
+type Mode = 'menu' | 'ai' | 'online' | 'tally';
 
 export default function App(): React.JSX.Element {
   const [mode, setMode] = useState<Mode>('menu');
@@ -23,7 +24,9 @@ export default function App(): React.JSX.Element {
         <span className="subtitle">
           {mode === 'menu'
             ? '마이티 · 티츄'
-            : `${GAMES[game].label} · ${mode === 'ai' ? 'AI 대전' : '온라인'}`}
+            : mode === 'tally'
+              ? '마이티 · 오프라인 점수판'
+              : `${GAMES[game].label} · ${mode === 'ai' ? 'AI 대전' : '온라인'}`}
         </span>
         {mode !== 'menu' ? (
           <button type="button" className="btn btn--ghost" onClick={() => setMode('menu')}>
@@ -41,6 +44,7 @@ export default function App(): React.JSX.Element {
       ) : null}
       {mode === 'ai' ? <AiMode game={game} /> : null}
       {mode === 'online' ? <OnlineMode game={game} /> : null}
+      {mode === 'tally' ? <Tally /> : null}
     </main>
   );
 }
@@ -81,6 +85,16 @@ function Menu({
       <p className="panel__hint">
         AI 대전은 서버 없이 브라우저 안에서 돌아갑니다. 온라인은 방 코드를 공유해 함께합니다.
       </p>
+
+      <div className="menu__divider" />
+      <p className="panel__hint">
+        실제 카드로 둘러앉아 치시나요? 공약과 결과만 넣으면 점수를 계산해 드립니다.
+      </p>
+      <div className="panel__row">
+        <button type="button" className="btn" onClick={() => onPickMode('tally')}>
+          오프라인 점수판 (마이티 5인)
+        </button>
+      </div>
     </div>
   );
 }

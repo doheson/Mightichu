@@ -183,3 +183,35 @@ describe('재딜', () => {
     });
   });
 });
+
+describe('기준선 조정 (하우스 룰)', () => {
+  it('기본 기준은 13 — 13 공약 13장이 0점', () => {
+    expect(detailOf({ contract: { trump: 'H', count: 13 }, declarerPoints: 13 }).baseScore).toBe(0);
+  });
+
+  it('기준을 11 로 두면 11 공약 11장이 0점', () => {
+    const d = computeScore(
+      input({ contract: { trump: 'H', count: 11 }, declarerPoints: 11, base: 11 }),
+    ).detail as unknown as ScoringDetail;
+    expect(d.won).toBe(true);
+    expect(d.baseScore).toBe(0);
+  });
+
+  it('기준을 안 맞추면 낮은 공약에서 성공인데 점수가 음수가 된다', () => {
+    const d = computeScore(
+      input({ contract: { trump: 'H', count: 11 }, declarerPoints: 11 }),
+    ).detail as unknown as ScoringDetail;
+    expect(d.won).toBe(true);
+    expect(d.baseScore).toBe(-4); // 2 × (11 − 13)
+  });
+
+  it('실패 점수는 기준과 무관하다 — 부족한 장수 그대로', () => {
+    const a = computeScore(input({ contract: { trump: 'H', count: 16 }, declarerPoints: 12 }));
+    const b = computeScore(
+      input({ contract: { trump: 'H', count: 16 }, declarerPoints: 12, base: 11 }),
+    );
+    expect((a.detail as unknown as ScoringDetail).baseScore).toBe(
+      (b.detail as unknown as ScoringDetail).baseScore,
+    );
+  });
+});

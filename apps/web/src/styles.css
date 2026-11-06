@@ -593,3 +593,126 @@ body {
 .account__who { font-size: 13px; font-weight: 600; }
 .account__who--guest { color: var(--text-dim); font-weight: 400; }
 .account__form { gap: 8px; }
+
+/* ── 오프라인 점수판 */
+.menu__divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+.tally__totals {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+@media (max-width: 560px) {
+  .tally__totals { grid-template-columns: repeat(3, 1fr); }
+}
+.tallycard {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+.tallycard--lead { border-color: #ffd964; box-shadow: 0 0 0 1px #ffd964 inset; }
+.tallycard__name {
+  font-size: 12px; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.tallycard__score { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.tally__names { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+@media (max-width: 560px) { .tally__names { grid-template-columns: repeat(2, 1fr); } }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+
+/* 0~20 을 한눈에 누를 수 있게 */
+.pointpad { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; }
+@media (max-width: 560px) { .pointpad { grid-template-columns: repeat(7, 1fr); } }
+.pointpad__cell {
+  padding: 7px 0;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 6px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.pointpad__cell:hover { border-color: var(--accent); }
+.pointpad__cell--on {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-text);
+  font-weight: 700;
+}
+
+.preview {
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 8px;
+  padding: 9px 11px;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.preview--won  { border-left-color: var(--pos); }
+.preview--lost { border-left-color: var(--neg); }
+.preview__head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.preview__formula { font-size: 12px; color: var(--text-dim); }
+.preview__row { display: flex; gap: 12px; flex-wrap: wrap; }
+.preview__cell { display: flex; gap: 5px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.preview__who { color: var(--text-dim); font-weight: 400; }
+
+.tally__table td, .tally__table th { padding: 5px 4px; }
+.tally__bid { text-align: left !important; font-size: 12px; white-space: nowrap; }
+.tally__who { display: block; font-size: 10.5px; color: var(--text-dim); }
+
+/* ── 비딩판 (실물 판 배열) */
+.board {
+  display: flex; flex-direction: column; gap: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  overflow-x: auto;
+}
+.board__row { display: flex; align-items: center; gap: 7px; }
+.board__suit {
+  width: 22px; flex: 0 0 22px; text-align: center;
+  font-size: 15px; font-weight: 700;
+}
+.board__row--nt .board__suit { font-size: 10px; width: 22px; line-height: 1.1; }
+.board__row--d .board__suit, .board__row--h .board__suit { color: var(--card-red); }
+
+.board__cells { display: flex; gap: 3px; flex: 1 1 auto; }
+.board__cell {
+  flex: 1 1 0; min-width: 26px;
+  padding: 6px 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.board__cell:hover { border-color: var(--accent); }
+/* 기준선 미만은 흐리게 — 모임에 따라 안 쓰는 칸이다 */
+.board__cell--low { opacity: 0.4; }
+.board__cell--on {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-text);
+  opacity: 1;
+}
+/* 실물 판처럼 줄마다 색을 준다 */
+.board__row--s .board__cell--on { background: #3b6fd4; border-color: #3b6fd4; }
+.board__row--d .board__cell--on { background: #d9a227; border-color: #d9a227; color: #2a1f00; }
+.board__row--h .board__cell--on { background: #d6453f; border-color: #d6453f; }
+.board__row--c .board__cell--on { background: #3f444c; border-color: #3f444c; }
+
+.board__legend { display: flex; gap: 3px; flex: 0 0 auto; }
+.board__chip {
+  font-size: 10.5px; padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.board__head { display: flex; justify-content: flex-end; }
+.board__headnote { font-size: 9.5px; color: var(--text-dim); letter-spacing: 0.03em; }
